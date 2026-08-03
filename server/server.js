@@ -5,6 +5,8 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 const topicRoutes = require('./routes/topicRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const scheduleRoutes = require('./routes/scheduleRoutes');
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/subjects', subjectRoutes);
 app.use('/api/topics', topicRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/schedule', scheduleRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SylloTrack API is running' });

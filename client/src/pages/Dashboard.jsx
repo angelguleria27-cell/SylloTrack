@@ -1,31 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CheckCircle, ListTodo, TrendingUp, PlusCircle } from 'lucide-react';
+import {
+  BookOpen,
+  CheckCircle,
+  ListTodo,
+  TrendingUp,
+  PlusCircle,
+  Calendar,
+  Clock,
+  AlertCircle,
+  ArrowRight,
+  GraduationCap,
+  CheckCircle2,
+  Circle,
+} from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
 import SubjectCard from '../components/SubjectCard';
 
 const Dashboard = () => {
   const [subjects, setSubjects] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+  const [todaySchedule, setTodaySchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchSubjects = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/subjects');
-      setSubjects(res.data);
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const [subRes, evRes, schedRes] = await Promise.all([
+        api.get('/subjects'),
+        api.get('/events'),
+        api.get(`/schedule?date=${todayStr}`),
+      ]);
+
+      setSubjects(subRes.data);
+      setUpcomingEvents(
+        evRes.data
+          .filter((e) => e.type === 'exam' || e.type === 'assignment')
+          .slice(0, 4)
+      );
+      setTodaySchedule(schedRes.data);
       setError('');
     } catch (err) {
-      console.error('Failed to fetch subjects:', err);
-      setError('Failed to load subjects. Please check if the server is running.');
+      console.error('Failed to fetch dashboard data:', err);
+      setError('Failed to load dashboard. Please check if the server is running.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSubjects();
+    fetchDashboardData();
   }, []);
 
   const handleDeleteSubject = async (id, name) => {
@@ -40,11 +68,22 @@ const Dashboard = () => {
     }
   };
 
+  const handleToggleSchedule = async (id) => {
+    try {
+      const res = await api.patch(`/schedule/${id}/toggle`);
+      setTodaySchedule(todaySchedule.map((b) => (b._id === id ? res.data : b)));
+    } catch (err) {
+      console.error('Failed to toggle schedule block:', err);
+    }
+  };
+
   // Calculate overall stats
   const totalSubjects = subjects.length;
   const totalTopics = subjects.reduce((acc, curr) => acc + (curr.totalTopics || 0), 0);
   const completedTopics = subjects.reduce((acc, curr) => acc + (curr.completedTopics || 0), 0);
   const overallPercentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
+  const completedTodayCount = todaySchedule.filter((b) => b.completed).length;
 
   if (loading) {
     return (
@@ -59,18 +98,24 @@ const Dashboard = () => {
       <div className="page-header">
         <div className="page-title-group">
           <h1>Dashboard</h1>
-          <p className="page-subtitle">Track your syllabus progress and stay on top of your studies.</p>
+          <p className="page-subtitle">Track your syllabus progress, exams, and daily study schedule.</p>
         </div>
-        <Link to="/add-subject" className="btn btn-primary">
-          <PlusCircle size={18} />
-          <span>Add New Subject</span>
-        </Link>
+        <div className="header-actions">
+          <Link to="/calendar" className="btn btn-secondary">
+            <Calendar size={18} />
+            <span>Calendar & Schedule</span>
+          </Link>
+          <Link to="/add-subject" className="btn btn-primary">
+            <PlusCircle size={18} />
+            <span>Add Subject</span>
+          </Link>
+        </div>
       </div>
 
       {error && (
         <div className="empty-state" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
           <p style={{ color: 'var(--danger)' }}>{error}</p>
-          <button onClick={fetchSubjects} className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
+          <button onClick={fetchDashboardData} className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
             Retry
           </button>
         </div>
@@ -79,10 +124,10 @@ const Dashboard = () => {
       {/* Banner Card */}
       <div className="overview-banner">
         <div className="overview-details">
-          <h2>Syllabus Mastery</h2>
+          <h2>Syllabus & Goal Mastery</h2>
           <p>You have completed {completedTopics} out of {totalTopics} total topics across all subjects.</p>
-          <Link to="/add-subject" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
-            + Create New Subject
+          <Link to="/calendar" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
+            + Plan Schedule & Deadlines
           </Link>
         </div>
 
@@ -126,6 +171,97 @@ const Dashboard = () => {
           icon={TrendingUp}
           color="blue"
         />
+      </div>
+
+      {/* Quick Access Widgets: Deadlines & Today's Schedule */}
+      <div className="dashboard-widgets-grid">
+        {/* Widget 1: Upcoming Exams & Deadlines */}
+        <div className="dash-widget-card">
+          <div className="widget-header">
+            <div className="widget-title">
+              <GraduationCap size={20} className="text-primary" />
+              <h3>Exams & Deadlines</h3>
+            </div>
+            <Link to="/calendar" className="widget-link">
+              View All <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {upcomingEvents.length === 0 ? (
+            <div className="widget-empty">
+              <AlertCircle size={24} />
+              <p>No exams or assignments scheduled.</p>
+              <Link to="/calendar" className="btn btn-sm btn-secondary">
+                + Add Exam Date
+              </Link>
+            </div>
+          ) : (
+            <div className="widget-items-list">
+              {upcomingEvents.map((ev) => (
+                <div key={ev._id} className="widget-item">
+                  <span className={`chip-badge chip-${ev.type}`}>
+                    {ev.type === 'exam' ? '🎓 Exam' : '📝 Deadline'}
+                  </span>
+                  <div className="widget-item-info">
+                    <strong>{ev.title}</strong>
+                    <span className="widget-item-date">
+                      {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {ev.subject?.name ? ` • ${ev.subject.name}` : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Widget 2: Today's Day Schedule */}
+        <div className="dash-widget-card">
+          <div className="widget-header">
+            <div className="widget-title">
+              <Clock size={20} className="text-primary" />
+              <h3>Today's Study Schedule ({completedTodayCount}/{todaySchedule.length})</h3>
+            </div>
+            <Link to="/calendar" className="widget-link">
+              Day Scheduler <ArrowRight size={14} />
+            </Link>
+          </div>
+
+          {todaySchedule.length === 0 ? (
+            <div className="widget-empty">
+              <Clock size={24} />
+              <p>No study slots scheduled for today.</p>
+              <Link to="/calendar" className="btn btn-sm btn-primary">
+                + Plan Today's Schedule
+              </Link>
+            </div>
+          ) : (
+            <div className="widget-items-list">
+              {todaySchedule.map((block) => (
+                <div key={block._id} className="widget-item schedule-item">
+                  <button
+                    className="btn-toggle-check"
+                    onClick={() => handleToggleSchedule(block._id)}
+                  >
+                    {block.completed ? (
+                      <CheckCircle2 size={18} className="active" />
+                    ) : (
+                      <Circle size={18} />
+                    )}
+                  </button>
+                  <div className="widget-item-info">
+                    <strong className={block.completed ? 'strikethrough' : ''}>
+                      {block.startTime} - {block.endTime}: {block.title}
+                    </strong>
+                    {block.subject?.name && (
+                      <span className="widget-item-date">{block.subject.name}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Subjects Grid */}

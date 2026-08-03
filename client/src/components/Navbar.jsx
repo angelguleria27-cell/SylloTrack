@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, PlusCircle, LayoutDashboard, LogOut, User } from 'lucide-react';
+import { BookOpen, PlusCircle, LayoutDashboard, Calendar, LogOut, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -36,6 +36,13 @@ const Navbar = () => {
           >
             <LayoutDashboard size={18} />
             <span>Dashboard</span>
+          </Link>
+          <Link
+            to="/calendar"
+            className={`nav-link ${location.pathname === '/calendar' ? 'active' : ''}`}
+          >
+            <Calendar size={18} />
+            <span>Calendar & Scheduler</span>
           </Link>
           <Link
             to="/add-subject"

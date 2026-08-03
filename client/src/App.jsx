@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import AddSubject from './pages/AddSubject';
 import SubjectDetail from './pages/SubjectDetail';
 import EditSubject from './pages/EditSubject';
+import CalendarPage from './pages/CalendarPage';
 
 function App() {
   return (
@@ -43,6 +44,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
                   </ProtectedRoute>
                 }
               />
