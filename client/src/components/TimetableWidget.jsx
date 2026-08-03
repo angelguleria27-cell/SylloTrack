@@ -1,47 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, BookOpen, MapPin } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
-
-// Pre-loaded class timetable for B.Tech CSE Section A (Semester 5)
-const SECTION_A_TIMETABLE = {
-  Mon: [
-    { time: '09:00 - 10:00', code: 'BTCS-501', name: 'Database Management Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '10:00 - 11:00', code: 'BTCS-502', name: 'Operating Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '11:15 - 12:15', code: 'BTCS-503', name: 'Design & Analysis of Algorithms', room: 'LH-101', type: 'Lecture' },
-    { time: '01:30 - 03:30', code: 'BTCS-506', name: 'DBMS Lab (Batch A1/A2)', room: 'Computer Lab 3', type: 'Lab' },
-  ],
-  Tue: [
-    { time: '09:00 - 10:00', code: 'BTCS-504', name: 'Computer Networks', room: 'LH-101', type: 'Lecture' },
-    { time: '10:00 - 11:00', code: 'BTCS-505', name: 'Software Engineering', room: 'LH-101', type: 'Lecture' },
-    { time: '11:15 - 12:15', code: 'BTCS-502', name: 'Operating Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '01:30 - 03:30', code: 'BTCS-507', name: 'OS & Linux Lab', room: 'Computer Lab 1', type: 'Lab' },
-  ],
-  Wed: [
-    { time: '09:00 - 10:00', code: 'BTCS-503', name: 'Design & Analysis of Algorithms', room: 'LH-101', type: 'Lecture' },
-    { time: '10:00 - 11:00', code: 'BTCS-501', name: 'Database Management Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '11:15 - 12:15', code: 'BTCS-504', name: 'Computer Networks', room: 'LH-101', type: 'Lecture' },
-    { time: '01:30 - 03:30', code: 'BTCS-508', name: 'Algorithms Lab', room: 'Computer Lab 2', type: 'Lab' },
-  ],
-  Thu: [
-    { time: '09:00 - 10:00', code: 'BTCS-505', name: 'Software Engineering', room: 'LH-101', type: 'Lecture' },
-    { time: '10:00 - 11:00', code: 'BTCS-502', name: 'Operating Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '11:15 - 12:15', code: 'BTCS-503', name: 'Design & Analysis of Algorithms', room: 'LH-101', type: 'Lecture' },
-    { time: '01:30 - 03:30', code: 'BTCS-509', name: 'Networks Lab', room: 'Networking Lab', type: 'Lab' },
-  ],
-  Fri: [
-    { time: '09:00 - 10:00', code: 'BTCS-504', name: 'Computer Networks', room: 'LH-101', type: 'Lecture' },
-    { time: '10:00 - 11:00', code: 'BTCS-501', name: 'Database Management Systems', room: 'LH-101', type: 'Lecture' },
-    { time: '11:15 - 12:15', code: 'HSMC-101', name: 'Aptitude & Soft Skills', room: 'Auditorium B', type: 'Seminar' },
-    { time: '01:30 - 03:30', code: 'BTCS-510', name: 'Minor Project Seminar', room: 'Seminar Hall', type: 'Project' },
-  ],
-};
+import api from '../api/axios';
 
 const Days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DayFullNames = {
+  Mon: 'Monday',
+  Tue: 'Tuesday',
+  Wed: 'Wednesday',
+  Thu: 'Thursday',
+  Fri: 'Friday',
+};
 
 const TimetableWidget = () => {
   const { playClickSound } = useTheme();
-  
+
   const getTodayAbbr = () => {
     const dayIndex = new Date().getDay();
     const map = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -50,9 +24,25 @@ const TimetableWidget = () => {
   };
 
   const [selectedDay, setSelectedDay] = useState(getTodayAbbr());
+  const [dbTimetable, setDbTimetable] = useState([]);
   const todayAbbr = getTodayAbbr();
 
-  const currentLectures = SECTION_A_TIMETABLE[selectedDay] || [];
+  useEffect(() => {
+    const fetchTimetable = async () => {
+      try {
+        const res = await api.get('/timetable');
+        if (res.data && res.data.length > 0) {
+          setDbTimetable(res.data);
+        }
+      } catch (err) {
+        console.error('Failed to load timetable widget data:', err);
+      }
+    };
+    fetchTimetable();
+  }, []);
+
+  const fullDay = DayFullNames[selectedDay];
+  const dayEntries = dbTimetable.filter((t) => t.day === fullDay);
 
   return (
     <div className="timetable-widget card glass-panel">
@@ -87,36 +77,44 @@ const TimetableWidget = () => {
 
       {/* Lectures List */}
       <div className="timetable-classes-list">
-        {currentLectures.map((lecture, idx) => (
-          <div key={idx} className="timetable-class-card">
-            <div className="class-time-col">
-              <span className="time-badge">{lecture.time}</span>
-              <span className={`type-tag type-${lecture.type.toLowerCase()}`}>
-                {lecture.type}
-              </span>
-            </div>
-
-            <div className="class-details">
-              <div className="class-header-row">
-                <span className="code-pill">{lecture.code}</span>
-                <span className="room-pill">
-                  <MapPin size={12} /> {lecture.room}
+        {dayEntries.length === 0 ? (
+          <div className="widget-empty" style={{ padding: '1.5rem', textAlign: 'center' }}>
+            <Clock size={24} className="empty-icon-muted" />
+            <p style={{ margin: '0.5rem 0', color: 'var(--text-muted)' }}>No lectures scheduled for {fullDay}.</p>
+          </div>
+        ) : (
+          dayEntries.map((lecture) => (
+            <div key={lecture._id} className="timetable-class-card">
+              <div className="class-time-col">
+                <span className="time-badge">{lecture.startTime} - {lecture.endTime}</span>
+                <span className="type-tag type-lecture">
+                  Class
                 </span>
               </div>
-              <h4 className="class-name">{lecture.name}</h4>
-            </div>
 
-            <Link
-              to="/subjects"
-              onClick={playClickSound}
-              className="class-action-btn"
-              title="View Subject Syllabus"
-            >
-              <BookOpen size={16} />
-              <span>Syllabus</span>
-            </Link>
-          </div>
-        ))}
+              <div className="class-details">
+                <div className="class-header-row">
+                  <span className="code-pill">{lecture.subject?.code || 'SEC-A'}</span>
+                  <span className="room-pill">
+                    <MapPin size={12} /> {lecture.room || 'LT-3'}
+                  </span>
+                </div>
+                <h4 className="class-name">{lecture.subject?.name || 'Lecture'}</h4>
+                {lecture.teacher && <span className="teacher-name" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Faculty: {lecture.teacher}</span>}
+              </div>
+
+              <Link
+                to="/subjects"
+                onClick={playClickSound}
+                className="class-action-btn"
+                title="View Subject Syllabus"
+              >
+                <BookOpen size={16} />
+                <span>Syllabus</span>
+              </Link>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

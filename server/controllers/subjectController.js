@@ -225,13 +225,15 @@ const toggleTopicCompletion = async (req, res) => {
   }
 };
 
-// POST /api/subjects (Create custom subject)
+// POST /api/subjects (Create subject)
 const createSubject = async (req, res) => {
   try {
-    const { name, code, semester, ltpc, description, units } = req.body;
+    const { name, code, semester, ltpc, description, units, isGlobal } = req.body;
     if (!name || name.trim() === '') {
       return res.status(400).json({ message: 'Subject name is required' });
     }
+
+    const isAdmin = req.user && req.user.role === 'admin';
 
     const subject = new Subject({
       name: name.trim(),
@@ -240,8 +242,8 @@ const createSubject = async (req, res) => {
       ltpc: ltpc || '3-0-0-3',
       section: 'Section A',
       description: description || '',
-      isGlobal: false,
-      user: req.user._id,
+      isGlobal: isAdmin ? (isGlobal !== undefined ? isGlobal : true) : false,
+      user: isAdmin ? null : req.user._id,
       units: units || [],
     });
 
@@ -283,8 +285,9 @@ const deleteSubject = async (req, res) => {
       return res.status(404).json({ message: 'Subject not found' });
     }
 
-    // Allow deleting custom subjects or resetting progress for global subjects
-    if (subject.isGlobal) {
+    const isAdmin = req.user && req.user.role === 'admin';
+
+    if (subject.isGlobal && !isAdmin) {
       await UserProgress.deleteMany({ subject: req.params.id, user: req.user._id });
       return res.json({ message: 'Progress for global subject reset successfully.' });
     }
@@ -298,6 +301,161 @@ const deleteSubject = async (req, res) => {
   }
 };
 
+// POST /api/subjects/:id/units (Add Unit)
+const addUnit = async (req, res) => {
+  try {
+    const { unitNumber, title, topics } = req.body;
+    const subject = await Subject.findById(req.params.id);
+
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const newUnit = {
+      unitNumber: unitNumber || (subject.units ? subject.units.length + 1 : 1),
+      title: title ? title.trim() : `Unit ${subject.units.length + 1}`,
+      topics: (topics || []).map((t) => ({ title: typeof t === 'string' ? t.trim() : t.title.trim() })),
+    };
+
+    subject.units.push(newUnit);
+    await subject.save();
+
+    res.status(201).json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/subjects/:id/units/:unitId (Update Unit)
+const updateUnit = async (req, res) => {
+  try {
+    const { unitNumber, title } = req.body;
+    const subject = await Subject.findById(req.params.id);
+
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const unit = subject.units.id(req.params.unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    if (unitNumber) unit.unitNumber = unitNumber;
+    if (title) unit.title = title.trim();
+
+    await subject.save();
+    res.json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/subjects/:id/units/:unitId (Delete Unit)
+const deleteUnit = async (req, res) => {
+  try {
+    const subject = await Subject.findById(req.params.id);
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const unitIndex = subject.units.findIndex((u) => u._id.toString() === req.params.unitId);
+    if (unitIndex === -1) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    subject.units.splice(unitIndex, 1);
+    await subject.save();
+
+    res.json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/subjects/:id/units/:unitId/topics (Add Topic to Unit)
+const addTopicToUnit = async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: 'Topic title is required' });
+    }
+
+    const subject = await Subject.findById(req.params.id);
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const unit = subject.units.id(req.params.unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    unit.topics.push({ title: title.trim() });
+    await subject.save();
+
+    res.status(201).json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/subjects/:id/units/:unitId/topics/:topicId (Update Topic in Unit)
+const updateTopicInUnit = async (req, res) => {
+  try {
+    const { title } = req.body;
+    const subject = await Subject.findById(req.params.id);
+
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const unit = subject.units.id(req.params.unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    const topic = unit.topics.id(req.params.topicId);
+    if (!topic) {
+      return res.status(404).json({ message: 'Topic not found' });
+    }
+
+    if (title) topic.title = title.trim();
+    await subject.save();
+
+    res.json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/subjects/:id/units/:unitId/topics/:topicId (Delete Topic from Unit)
+const deleteTopicFromUnit = async (req, res) => {
+  try {
+    const subject = await Subject.findById(req.params.id);
+    if (!subject) {
+      return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const unit = subject.units.id(req.params.unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    const topicIndex = unit.topics.findIndex((t) => t._id.toString() === req.params.topicId);
+    if (topicIndex === -1) {
+      return res.status(404).json({ message: 'Topic not found' });
+    }
+
+    unit.topics.splice(topicIndex, 1);
+    await subject.save();
+
+    res.json(subject);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getSubjects,
   getSubjectById,
@@ -305,4 +463,10 @@ module.exports = {
   createSubject,
   updateSubject,
   deleteSubject,
+  addUnit,
+  updateUnit,
+  deleteUnit,
+  addTopicToUnit,
+  updateTopicInUnit,
+  deleteTopicFromUnit,
 };

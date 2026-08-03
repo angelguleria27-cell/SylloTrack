@@ -50,6 +50,7 @@ const registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role || 'student',
         token: generateToken(user._id),
       });
     } else {
@@ -83,6 +84,7 @@ const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role || 'student',
         token: generateToken(user._id),
       });
     } else {
@@ -91,6 +93,44 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: error.message || 'Server error during login' });
+  }
+};
+
+// @desc    Authenticate admin & get token
+// @route   POST /api/auth/admin-login
+// @access  Public (Admin only check)
+const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Admin email address is required' });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user || !(await user.matchPassword(password))) {
+      return res.status(401).json({ message: 'Invalid admin email or password' });
+    }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Account is not registered as an Administrator.' });
+    }
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({ message: error.message || 'Server error during admin authentication' });
   }
 };
 
@@ -105,6 +145,7 @@ const getMe = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        role: user.role || 'student',
       });
     } else {
       res.status(404).json({ message: 'User not found' });
@@ -117,5 +158,6 @@ const getMe = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  adminLogin,
   getMe,
 };

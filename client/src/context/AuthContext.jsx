@@ -74,6 +74,18 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const adminLogin = async (email, password) => {
+    const response = await api.post('/auth/admin-login', { email, password });
+    const { token: newToken, ...userData } = response.data;
+
+    localStorage.setItem('syllotrack_token', newToken);
+    localStorage.setItem('syllotrack_user', JSON.stringify(userData));
+
+    setToken(newToken);
+    setUser(userData);
+    return userData;
+  };
+
   const logout = () => {
     localStorage.removeItem('syllotrack_token');
     localStorage.removeItem('syllotrack_user');
@@ -88,7 +100,9 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
         login,
+        adminLogin,
         register,
         logout,
       }}

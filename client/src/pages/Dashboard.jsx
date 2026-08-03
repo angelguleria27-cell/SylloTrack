@@ -34,6 +34,8 @@ const Dashboard = () => {
   const [subjects, setSubjects] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [todaySchedule, setTodaySchedule] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,10 +47,12 @@ const Dashboard = () => {
       setLoading(true);
       const todayStr = new Date().toISOString().split('T')[0];
 
-      const [subRes, evRes, schedRes] = await Promise.all([
+      const [subRes, evRes, schedRes, annRes, assRes] = await Promise.all([
         api.get('/subjects'),
         api.get('/events'),
         api.get(`/schedule?date=${todayStr}`),
+        api.get('/announcements'),
+        api.get('/assignments'),
       ]);
 
       setSubjects(subRes.data);
@@ -58,6 +62,8 @@ const Dashboard = () => {
           .slice(0, 4)
       );
       setTodaySchedule(schedRes.data);
+      setAnnouncements(annRes.data);
+      setAssignments(assRes.data);
       setError('');
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
@@ -118,6 +124,18 @@ const Dashboard = () => {
       </div>
     );
   }
+
+  const handleToggleAssignment = async (id) => {
+    try {
+      const res = await api.patch(`/assignments/${id}/submit`);
+      playCheckSound(res.data.submitted);
+      setAssignments(
+        assignments.map((a) => (a._id === id ? { ...a, submitted: res.data.submitted } : a))
+      );
+    } catch (err) {
+      console.error('Failed to toggle assignment submission:', err);
+    }
+  };
 
   return (
     <div className="command-center-container animate-fade-in">
@@ -180,6 +198,22 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Department Announcements Banner */}
+      {announcements.length > 0 && (
+        <div className="card glass-panel" style={{ borderLeft: '4px solid var(--primary)', marginBottom: '1.5rem', padding: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span className="hero-tag glow-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', color: 'var(--primary)' }}>
+              📢 Section A Announcement
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Posted by {announcements[0].author?.name || 'Admin'}
+            </span>
+          </div>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.4rem', fontWeight: 700 }}>{announcements[0].title}</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem', lineHeight: '1.5' }}>{announcements[0].content}</p>
+        </div>
+      )}
 
       {error && (
         <div className="empty-state card" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
