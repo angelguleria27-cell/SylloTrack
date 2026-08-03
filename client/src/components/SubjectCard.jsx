@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Layers, CheckCircle2, ChevronRight, Edit3, Trash2 } from 'lucide-react';
+import { BookOpen, Layers, CheckCircle2, ChevronRight, Edit3, Trash2, ArrowUpRight } from 'lucide-react';
 import ProgressBar from './ProgressBar';
+import { useTheme } from '../context/ThemeContext';
 
 const SubjectCard = ({ subject, onDelete }) => {
+  const { playClickSound, playDeleteSound } = useTheme();
+
   const {
     _id,
     name,
@@ -16,65 +19,77 @@ const SubjectCard = ({ subject, onDelete }) => {
     isGlobal = false,
   } = subject;
 
+  const percentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
   return (
-    <div className="subject-card">
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-            {code && <span className="code-pill">{code}</span>}
-            {semester && <span className="meta-pill">Sem {semester}</span>}
-            {ltpc && <span className="meta-pill">L-T-P-C: {ltpc}</span>}
-          </div>
-          <span className="topic-badge">
-            {completedTopics} / {totalTopics} Topics
-          </span>
+    <div className="subject-card card glass-panel interactive-card">
+      <div className="subject-card-header">
+        <div className="card-pills-row">
+          {code && <span className="code-pill">{code}</span>}
+          {semester && <span className="meta-pill">Sem {semester}</span>}
+          {ltpc && <span className="meta-pill">L-T-P-C: {ltpc}</span>}
         </div>
-
-        <h3 className="subject-name" style={{ fontSize: '1.2rem', marginBottom: '0.75rem' }}>
-          {name}
-        </h3>
-
-        <div style={{ display: 'flex', gap: '1.25rem', marginBottom: '0.85rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          {unitsCount > 0 && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Layers size={15} color="var(--primary)" />
-              {unitsCount} Units / Modules
-            </span>
-          )}
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <CheckCircle2 size={15} color="var(--success)" />
-            {completedTopics} Completed
-          </span>
-        </div>
-
-        <div className="subject-card-body">
-          <ProgressBar
-            completed={completedTopics}
-            total={totalTopics}
-            variant="accent"
-          />
-        </div>
+        <span className={`status-pill ${percentage === 100 ? 'done' : percentage > 0 ? 'in-progress' : 'new'}`}>
+          {percentage}% Done
+        </span>
       </div>
 
-      <div className="subject-card-actions" style={{ marginTop: '1rem' }}>
-        <Link to={`/subject/${_id}`} className="btn btn-primary btn-card-action">
+      <h3 className="subject-name">{name}</h3>
+
+      <div className="subject-card-meta">
+        {unitsCount > 0 && (
+          <span className="meta-item">
+            <Layers size={14} color="var(--primary)" />
+            {unitsCount} Units
+          </span>
+        )}
+        <span className="meta-item">
+          <CheckCircle2 size={14} color="var(--success)" />
+          {completedTopics} / {totalTopics} Topics
+        </span>
+      </div>
+
+      <div className="subject-card-progress">
+        <ProgressBar
+          completed={completedTopics}
+          total={totalTopics}
+          variant="accent"
+          height="8px"
+        />
+      </div>
+
+      <div className="subject-card-actions">
+        <Link
+          to={`/subject/${_id}`}
+          className="btn btn-primary btn-card-action"
+          onClick={playClickSound}
+        >
           <BookOpen size={16} />
-          <span>Syllabus & Topics</span>
-          <ChevronRight size={16} />
+          <span>View Syllabus</span>
+          <ArrowUpRight size={16} />
         </Link>
+
         {!isGlobal && onDelete && (
-          <>
-            <Link to={`/edit-subject/${_id}`} className="btn btn-secondary btn-card-action">
-              <Edit3 size={16} />
+          <div className="card-actions-secondary">
+            <Link
+              to={`/edit-subject/${_id}`}
+              className="btn btn-secondary btn-icon-only"
+              onClick={playClickSound}
+              title="Edit Subject"
+            >
+              <Edit3 size={15} />
             </Link>
             <button
-              onClick={() => onDelete(_id, name)}
+              onClick={() => {
+                playDeleteSound();
+                onDelete(_id, name);
+              }}
               className="btn btn-danger btn-icon-only"
               title="Delete Subject"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} />
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>

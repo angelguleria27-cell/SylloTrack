@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, Mail, Lock, Eye, EyeOff, LogIn, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
+  const { playClickSound, playSuccessSound } = useTheme();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,6 +28,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    playClickSound();
 
     if (!formData.email.trim() || !formData.password) {
       setError('Please fill in all fields.');
@@ -35,6 +39,7 @@ const Login = () => {
       setIsSubmitting(true);
       setError('');
       await login(formData.email, formData.password);
+      playSuccessSound();
       navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
@@ -47,17 +52,17 @@ const Login = () => {
   };
 
   const handleDemoLogin = async () => {
+    playClickSound();
     try {
       setIsSubmitting(true);
       setError('');
-      // Try logging in with demo account, or register if it doesn't exist
       try {
         await login('student@syllotrack.edu', 'password123');
       } catch (loginErr) {
-        // If demo user doesn't exist yet, register demo user automatically!
         const { register } = useAuth();
         await register('Alex Morgan', 'student@syllotrack.edu', 'password123');
       }
+      playSuccessSound();
       navigate(from, { replace: true });
     } catch (err) {
       setError('Could not complete demo login. Please try registering a new account.');
@@ -67,12 +72,12 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page animate-fade-in">
       <div className="auth-container">
         {/* Left Side: Branding / Feature Highlights */}
         <div className="auth-branding">
           <div className="branding-content">
-            <div className="brand-logo-large">
+            <div className="brand-logo-large glow-badge">
               <BookOpen size={36} />
             </div>
             <h1 className="brand-headline">SylloTrack</h1>
@@ -100,7 +105,7 @@ const Login = () => {
 
         {/* Right Side: Auth Form */}
         <div className="auth-card-wrapper">
-          <div className="auth-card">
+          <div className="auth-card card glass-panel">
             <div className="auth-card-header">
               <h2>Welcome Back 👋</h2>
               <p>Sign in to continue tracking your academic goals</p>
@@ -122,6 +127,7 @@ const Login = () => {
                     type="email"
                     id="email"
                     name="email"
+                    className="form-control"
                     placeholder="student@university.edu"
                     value={formData.email}
                     onChange={handleChange}
@@ -139,6 +145,7 @@ const Login = () => {
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     name="password"
+                    className="form-control"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
@@ -147,8 +154,8 @@ const Login = () => {
                   />
                   <button
                     type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
+                    className="password-toggle-btn icon-btn-ghost"
+                    onClick={() => { playClickSound(); setShowPassword(!showPassword); }}
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -160,6 +167,7 @@ const Login = () => {
                 type="submit"
                 className="btn btn-primary btn-auth"
                 disabled={isSubmitting}
+                style={{ width: '100%', marginTop: '0.5rem' }}
               >
                 {isSubmitting ? (
                   <>
@@ -176,18 +184,19 @@ const Login = () => {
 
               <button
                 type="button"
-                className="btn btn-demo-auth"
+                className="btn btn-secondary btn-demo-auth"
                 onClick={handleDemoLogin}
                 disabled={isSubmitting}
+                style={{ width: '100%', marginTop: '0.75rem' }}
               >
                 <Sparkles size={16} /> Quick Demo Student Access
               </button>
             </form>
 
-            <div className="auth-footer">
+            <div className="auth-footer" style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <p>
                 Don't have an account?{' '}
-                <Link to="/register" className="auth-link">
+                <Link to="/register" onClick={playClickSound} className="auth-link" style={{ color: 'var(--primary)', fontWeight: 700 }}>
                   Create Account
                 </Link>
               </p>

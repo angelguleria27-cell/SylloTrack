@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,13 +15,35 @@ import SubjectDetail from './pages/SubjectDetail';
 import EditSubject from './pages/EditSubject';
 import CalendarPage from './pages/CalendarPage';
 
+function AppLayout({ children }) {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <main className="auth-full-screen">{children}</main>;
+  }
+
+  return (
+    <div className="app-shell">
+      <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
+      <div className="app-shell-main">
+        <Navbar
+          onOpenMobileMenu={() => setIsMobileOpen(true)}
+          onGlobalSearch={(q) => setGlobalSearchQuery(q)}
+        />
+        <main className="main-content-viewport">{children}</main>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app-container">
-          <Navbar />
-          <main className="main-content">
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppLayout>
             <Routes>
               {/* Public Unauthenticated Routes */}
               <Route
@@ -92,10 +116,10 @@ function App() {
               {/* Fallback Catch-all Route */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </main>
-        </div>
-      </Router>
-    </AuthProvider>
+          </AppLayout>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

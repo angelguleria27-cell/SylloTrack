@@ -1,81 +1,103 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, LayoutDashboard, Calendar, LogOut, User, GraduationCap, Layers } from 'lucide-react';
+import React, { useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import {
+  Search,
+  Menu,
+  Sparkles,
+  Calendar,
+  BookOpen,
+  Command,
+  Sun,
+  Moon,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
-const Navbar = () => {
+const Navbar = ({ onOpenMobileMenu, onGlobalSearch }) => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { isDark, toggleTheme, soundEnabled, toggleSound, playClickSound } = useTheme();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  if (!isAuthenticated) return null;
+
+  // Format today's date nicely
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  // Get current page title dynamically
+  const getPageTitle = () => {
+    const path = location.pathname;
+    if (path === '/') return 'Command Center';
+    if (path.startsWith('/subjects')) return 'Subjects & Syllabus Directory';
+    if (path.startsWith('/calendar')) return 'Calendar & Scheduler';
+    if (path.startsWith('/subject/')) return 'Subject Syllabus Details';
+    if (path.startsWith('/add-subject')) return 'Add Subject';
+    if (path.startsWith('/edit-subject')) return 'Edit Subject';
+    return 'SylloTrack Workspace';
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
-
   return (
-    <header className="navbar">
-      <div className="nav-container">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <Link to="/" className="brand">
-            <div className="brand-icon">
-              <GraduationCap size={24} />
-            </div>
-            <span>SylloTrack</span>
-          </Link>
-          <span className="section-badge">
-            <BookOpen size={13} />
-            <span>Sec A CSE</span>
-          </span>
+    <header className="top-navbar">
+      <div className="top-nav-left">
+        <button
+          className="mobile-menu-trigger icon-btn-ghost"
+          onClick={onOpenMobileMenu}
+          title="Open Menu"
+        >
+          <Menu size={22} />
+        </button>
+
+        <div className="top-nav-title-group">
+          <span className="top-page-title">{getPageTitle()}</span>
+          <span className="top-nav-divider">•</span>
+          <span className="top-section-pill">B.Tech CSE Sec A</span>
+        </div>
+      </div>
+
+      {/* Global Quick Search / Filter Input */}
+      <div className="top-nav-center">
+        <div className="global-search-box">
+          <Search size={15} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Quick search syllabus topics, codes (BTCS-501)..."
+            onChange={(e) => onGlobalSearch && onGlobalSearch(e.target.value)}
+          />
+          <kbd className="search-shortcut">
+            <Command size={11} /> K
+          </kbd>
+        </div>
+      </div>
+
+      {/* Top Bar Right Actions */}
+      <div className="top-nav-right">
+        <div className="top-date-pill" title="Today's Date">
+          <Calendar size={14} />
+          <span>{todayFormatted}</span>
         </div>
 
-        <nav className="nav-links">
-          <Link
-            to="/"
-            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+        <div className="top-controls-group">
+          <button
+            onClick={toggleTheme}
+            className={`top-icon-btn ${isDark ? 'is-dark' : 'is-light'}`}
+            title={isDark ? 'Light Theme' : 'Dark Theme'}
           >
-            <LayoutDashboard size={18} />
-            <span>Dashboard</span>
-          </Link>
-          <Link
-            to="/subjects"
-            className={`nav-link ${location.pathname.startsWith('/subject') ? 'active' : ''}`}
-          >
-            <Layers size={18} />
-            <span>Subjects</span>
-          </Link>
-          <Link
-            to="/calendar"
-            className={`nav-link ${location.pathname === '/calendar' ? 'active' : ''}`}
-          >
-            <Calendar size={18} />
-            <span>Calendar & Scheduler</span>
-          </Link>
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
 
-          {/* User profile & Logout */}
-          <div className="nav-user-section">
-            <div className="user-pill" title={user?.email}>
-              <div className="user-avatar">
-                <User size={15} />
-              </div>
-              <span className="user-name">Hi, {firstName}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="btn-logout"
-              title="Sign Out"
-            >
-              <LogOut size={18} />
-              <span className="logout-text">Logout</span>
-            </button>
-          </div>
-        </nav>
+          <button
+            onClick={toggleSound}
+            className={`top-icon-btn ${soundEnabled ? 'is-on' : 'is-off'}`}
+            title={soundEnabled ? 'Mute Sounds' : 'Enable Sounds'}
+          >
+            {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </button>
+        </div>
       </div>
     </header>
   );

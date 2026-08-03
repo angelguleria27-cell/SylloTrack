@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Search, Layers, CheckCircle2, TrendingUp, PlusCircle, AlertCircle } from 'lucide-react';
+import {
+  BookOpen,
+  Search,
+  Layers,
+  CheckCircle2,
+  TrendingUp,
+  PlusCircle,
+  AlertCircle,
+  Grid,
+  List,
+  ArrowUpRight,
+  Filter,
+} from 'lucide-react';
 import api from '../api/axios';
 import SubjectCard from '../components/SubjectCard';
 import StatCard from '../components/StatCard';
+import ProgressBar from '../components/ProgressBar';
+import { useTheme } from '../context/ThemeContext';
 
 const SubjectsPage = () => {
+  const { playClickSound, playDeleteSound } = useTheme();
+
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
 
   const fetchSubjects = async () => {
     try {
@@ -30,6 +47,7 @@ const SubjectsPage = () => {
   }, []);
 
   const handleDeleteSubject = async (id, name) => {
+    playDeleteSound();
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
         await api.delete(`/subjects/${id}`);
@@ -61,96 +79,138 @@ const SubjectsPage = () => {
   }
 
   return (
-    <div>
+    <div className="subjects-page-container animate-fade-in">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-            <span className="section-badge">
+          <div className="title-tags-row">
+            <span className="section-badge glow-badge">
               <BookOpen size={12} />
               B.Tech CSE - Section A
             </span>
             <span className="meta-pill">Semester 5</span>
           </div>
-          <h1>Subjects & Syllabus</h1>
+          <h1>Subjects & Syllabus Directory</h1>
           <p className="page-subtitle">
-            Explore pre-loaded course structures, units, modules, and track syllabus progress independently.
+            Explore pre-loaded B.Tech CSE course structures, unit breakdowns, and track syllabus progress.
           </p>
         </div>
         <div className="header-actions">
-          <Link to="/add-subject" className="btn btn-secondary">
-            <PlusCircle size={18} />
+          <Link to="/add-subject" className="btn btn-primary" onClick={playClickSound}>
+            <PlusCircle size={17} />
             <span>Add Custom Subject</span>
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="empty-state" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
+        <div className="empty-state card" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
           <p style={{ color: 'var(--danger)' }}>{error}</p>
-          <button onClick={fetchSubjects} className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
+          <button
+            onClick={() => {
+              playClickSound();
+              fetchSubjects();
+            }}
+            className="btn btn-secondary"
+            style={{ marginTop: '0.5rem' }}
+          >
             Retry
           </button>
         </div>
       )}
 
-      {/* Stats Summary Bar */}
-      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+      {/* Overview Stat Grid */}
+      <div className="stats-grid">
         <StatCard
           title="Section Subjects"
           value={totalSubjects}
+          subtitle="Course Modules"
           icon={BookOpen}
           color="blue"
         />
         <StatCard
           title="Total Syllabus Topics"
           value={totalTopics}
+          subtitle="Curriculum Items"
           icon={Layers}
           color="amber"
         />
         <StatCard
           title="Topics Completed"
           value={completedTopics}
+          subtitle="Mastered"
           icon={CheckCircle2}
           color="green"
         />
         <StatCard
-          title="Syllabus Progress"
+          title="Overall Syllabus Progress"
           value={`${overallPercentage}%`}
+          subtitle="Semester Progress"
           icon={TrendingUp}
-          color="blue"
+          color="purple"
         />
       </div>
 
-      {/* Filter and Controls */}
-      <div className="controls-bar">
+      {/* Control Bar: Search & View Toggle */}
+      <div className="controls-bar card glass-panel">
         <div className="search-filter-box">
-          <Search size={18} color="var(--text-muted)" />
+          <Search size={17} className="search-icon" />
           <input
             type="text"
-            placeholder="Search subject name or code (e.g. BTCS-23502)..."
+            className="input-field"
+            placeholder="Search by subject name or course code (e.g. BTCS-501)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          Showing <strong>{filteredSubjects.length}</strong> of <strong>{totalSubjects}</strong> subjects
+
+        <div className="view-controls-right">
+          <span className="results-count-text">
+            Showing <strong>{filteredSubjects.length}</strong> of <strong>{totalSubjects}</strong> subjects
+          </span>
+
+          <div className="view-mode-toggle">
+            <button
+              className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => {
+                playClickSound();
+                setViewMode('grid');
+              }}
+              title="Grid View"
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => {
+                playClickSound();
+                setViewMode('table');
+              }}
+              title="List View"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Subject Cards Grid */}
+      {/* Subjects Content Grid or Table View */}
       {filteredSubjects.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">
-            <AlertCircle size={28} />
-          </div>
-          <h3>No subjects match your search</h3>
-          <p>Try clearing your search query or add a new subject.</p>
-          <button onClick={() => setSearchQuery('')} className="btn btn-secondary">
-            Clear Search Filter
+        <div className="empty-state card">
+          <AlertCircle size={32} color="var(--warning)" />
+          <h3>No subjects found</h3>
+          <p>No subject matches your search query. Clear search or create a new subject.</p>
+          <button
+            onClick={() => {
+              playClickSound();
+              setSearchQuery('');
+            }}
+            className="btn btn-secondary"
+          >
+            Clear Search
           </button>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="subject-grid">
           {filteredSubjects.map((subject) => (
             <SubjectCard
@@ -159,6 +219,74 @@ const SubjectsPage = () => {
               onDelete={handleDeleteSubject}
             />
           ))}
+        </div>
+      ) : (
+        /* Table / List View */
+        <div className="subjects-table-wrapper card glass-panel">
+          <table className="subjects-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject Name</th>
+                <th>Units</th>
+                <th>Topics Completed</th>
+                <th>Progress</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSubjects.map((sub) => {
+                const percentage =
+                  sub.totalTopics > 0 ? Math.round((sub.completedTopics / sub.totalTopics) * 100) : 0;
+                return (
+                  <tr key={sub._id}>
+                    <td>
+                      <span className="code-pill">{sub.code || 'SEC-A'}</span>
+                    </td>
+                    <td>
+                      <Link
+                        to={`/subject/${sub._id}`}
+                        className="table-subject-link"
+                        onClick={playClickSound}
+                      >
+                        <strong>{sub.name}</strong>
+                        <span className="table-sub-meta">Sem {sub.semester} • {sub.ltpc}</span>
+                      </Link>
+                    </td>
+                    <td>
+                      <span className="meta-pill">{sub.unitsCount || 0} Units</span>
+                    </td>
+                    <td>
+                      <span className="topic-badge">
+                        {sub.completedTopics} / {sub.totalTopics}
+                      </span>
+                    </td>
+                    <td style={{ minWidth: '160px' }}>
+                      <div className="table-progress-cell">
+                        <ProgressBar
+                          completed={sub.completedTopics}
+                          total={sub.totalTopics}
+                          height="8px"
+                          showLabel={false}
+                        />
+                        <span className="progress-num">{percentage}%</span>
+                      </div>
+                    </td>
+                    <td>
+                      <Link
+                        to={`/subject/${sub._id}`}
+                        className="btn btn-sm btn-primary"
+                        onClick={playClickSound}
+                      >
+                        <span>Syllabus</span>
+                        <ArrowUpRight size={14} />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

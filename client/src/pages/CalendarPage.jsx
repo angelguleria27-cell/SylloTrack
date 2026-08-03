@@ -20,6 +20,7 @@ import {
   Check,
 } from 'lucide-react';
 import api from '../api/axios';
+import { useTheme } from '../context/ThemeContext';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -28,13 +29,16 @@ const MONTH_NAMES = [
 ];
 
 const CalendarPage = () => {
-  // Navigation & View state
+  const { playClickSound, playCheckSound, playSuccessSound, playDeleteSound } = useTheme();
+
+  // View state: 'calendar' | 'scheduler' | 'deadlines'
+  const [activeTab, setActiveTab] = useState('calendar');
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [activeTab, setActiveTab] = useState('calendar'); // 'calendar' | 'scheduler' | 'deadlines'
 
   // Data states
   const [events, setEvents] = useState([]);
@@ -43,18 +47,18 @@ const CalendarPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filter states
-  const [filterType, setFilterType] = useState('all'); // 'all' | 'exam' | 'assignment' | 'study'
+  // Filters
+  const [filterType, setFilterType] = useState('all');
   const [filterSubject, setFilterSubject] = useState('all');
 
-  // Modal states
+  // Modals
   const [showEventModal, setShowEventModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
 
-  // Form states - Event
+  // Forms
   const [eventForm, setEventForm] = useState({
     title: '',
     type: 'exam',
@@ -65,7 +69,6 @@ const CalendarPage = () => {
     description: '',
   });
 
-  // Form states - Schedule Block
   const [scheduleForm, setScheduleForm] = useState({
     date: selectedDateStr,
     startTime: '09:00',
@@ -76,7 +79,6 @@ const CalendarPage = () => {
     notes: '',
   });
 
-  // Fetch data on load and when date range changes
   useEffect(() => {
     fetchInitialData();
   }, [currentDate]);
@@ -91,7 +93,6 @@ const CalendarPage = () => {
     try {
       setLoading(true);
       setError('');
-      // Get start & end of current view month
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       const startOfMonth = new Date(year, month - 1, 1).toISOString();
@@ -124,40 +125,40 @@ const CalendarPage = () => {
   // Calendar calculations
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
 
   const handlePrevMonth = () => {
+    playClickSound();
     setCurrentDate(new Date(year, month - 1, 1));
   };
 
   const handleNextMonth = () => {
+    playClickSound();
     setCurrentDate(new Date(year, month + 1, 1));
   };
 
   const handleToday = () => {
+    playClickSound();
     const today = new Date();
     setCurrentDate(today);
     setSelectedDateStr(today.toISOString().split('T')[0]);
   };
 
-  // Date selection helper
   const handleSelectDate = (dateString) => {
+    playClickSound();
     setSelectedDateStr(dateString);
     setEventForm((prev) => ({ ...prev, date: dateString }));
     setScheduleForm((prev) => ({ ...prev, date: dateString }));
   };
 
-  // Filter events
   const filteredEvents = events.filter((ev) => {
     if (filterType !== 'all' && ev.type !== filterType) return false;
     if (filterSubject !== 'all' && (ev.subject?._id || ev.subject) !== filterSubject) return false;
     return true;
   });
 
-  // Get events for a specific date (YYYY-MM-DD)
   const getEventsForDate = (dateObj) => {
     const dateStr = dateObj.toISOString().split('T')[0];
     return filteredEvents.filter((ev) => {
@@ -166,9 +167,9 @@ const CalendarPage = () => {
     });
   };
 
-  // Handle Event submit
   const handleEventSubmit = async (e) => {
     e.preventDefault();
+    playClickSound();
     try {
       if (editingEvent) {
         const res = await api.put(`/events/${editingEvent._id}`, eventForm);
@@ -177,17 +178,19 @@ const CalendarPage = () => {
         const res = await api.post('/events', eventForm);
         setEvents([...events, res.data]);
       }
+      playSuccessSound();
       setShowEventModal(false);
       setEditingEvent(null);
       resetEventForm();
     } catch (err) {
       console.error('Failed to save event:', err);
-      alert('Could not save event. Please check form details.');
+      alert('Could not save event.');
     }
   };
 
-  // Handle Event toggle
   const handleToggleEvent = async (eventId) => {
+    const targetEv = events.find((e) => e._id === eventId);
+    playCheckSound(!targetEv?.completed);
     try {
       const res = await api.patch(`/events/${eventId}/toggle`);
       setEvents(events.map((ev) => (ev._id === eventId ? res.data : ev)));
@@ -196,9 +199,9 @@ const CalendarPage = () => {
     }
   };
 
-  // Handle Event delete
   const handleDeleteEvent = async (eventId) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
+    playDeleteSound();
+    if (window.confirm('Delete this event?')) {
       try {
         await api.delete(`/events/${eventId}`);
         setEvents(events.filter((ev) => ev._id !== eventId));
@@ -208,9 +211,9 @@ const CalendarPage = () => {
     }
   };
 
-  // Handle Schedule Block submit
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
+    playClickSound();
     try {
       if (editingSchedule) {
         const res = await api.put(`/schedule/${editingSchedule._id}`, scheduleForm);
@@ -219,6 +222,7 @@ const CalendarPage = () => {
         const res = await api.post('/schedule', scheduleForm);
         setScheduleBlocks([...scheduleBlocks, res.data]);
       }
+      playSuccessSound();
       setShowScheduleModal(false);
       setEditingSchedule(null);
       resetScheduleForm();
@@ -228,8 +232,9 @@ const CalendarPage = () => {
     }
   };
 
-  // Handle Schedule block toggle
   const handleToggleSchedule = async (blockId) => {
+    const targetBlock = scheduleBlocks.find((b) => b._id === blockId);
+    playCheckSound(!targetBlock?.completed);
     try {
       const res = await api.patch(`/schedule/${blockId}/toggle`);
       setScheduleBlocks(scheduleBlocks.map((b) => (b._id === blockId ? res.data : b)));
@@ -238,8 +243,8 @@ const CalendarPage = () => {
     }
   };
 
-  // Handle Schedule block delete
   const handleDeleteSchedule = async (blockId) => {
+    playDeleteSound();
     if (window.confirm('Delete this schedule block?')) {
       try {
         await api.delete(`/schedule/${blockId}`);
@@ -250,10 +255,10 @@ const CalendarPage = () => {
     }
   };
 
-  // Auto Generate Day Schedule
   const handleAutoGenerateSchedule = async () => {
     try {
       setGeneratingSchedule(true);
+      playClickSound();
       const res = await api.post('/schedule/auto-generate', {
         date: selectedDateStr,
         startHour: 9,
@@ -261,7 +266,8 @@ const CalendarPage = () => {
         durationMinutes: 60,
       });
       fetchDaySchedule(selectedDateStr);
-      alert(`Successfully generated ${res.data.length} study session blocks for ${selectedDateStr}!`);
+      playSuccessSound();
+      alert(`Generated ${res.data.length} study sessions for Section A!`);
     } catch (err) {
       console.error('Failed to auto-generate schedule:', err);
       alert(err.response?.data?.message || 'Could not auto-generate schedule.');
@@ -271,6 +277,7 @@ const CalendarPage = () => {
   };
 
   const openAddEvent = (dateStr = selectedDateStr) => {
+    playClickSound();
     setEditingEvent(null);
     setEventForm({
       title: '',
@@ -285,6 +292,7 @@ const CalendarPage = () => {
   };
 
   const openEditEvent = (ev) => {
+    playClickSound();
     setEditingEvent(ev);
     setEventForm({
       title: ev.title,
@@ -299,6 +307,7 @@ const CalendarPage = () => {
   };
 
   const openAddSchedule = (timeSlot = '09:00') => {
+    playClickSound();
     setEditingSchedule(null);
     const endH = (parseInt(timeSlot.split(':')[0], 10) + 1).toString().padStart(2, '0');
     setScheduleForm({
@@ -314,6 +323,7 @@ const CalendarPage = () => {
   };
 
   const openEditSchedule = (block) => {
+    playClickSound();
     setEditingSchedule(block);
     setScheduleForm({
       date: block.date,
@@ -351,7 +361,6 @@ const CalendarPage = () => {
     });
   };
 
-  // Helper for rendering event badges
   const renderTypeBadge = (type) => {
     switch (type) {
       case 'exam':
@@ -365,7 +374,6 @@ const CalendarPage = () => {
     }
   };
 
-  // Helper to format days remaining
   const getDaysRemainingText = (eventDateStr) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -382,23 +390,21 @@ const CalendarPage = () => {
     return <span className="countdown-tag info">In {diffDays} days</span>;
   };
 
-  // Calculate day completion rate for scheduler
   const completedScheduleCount = scheduleBlocks.filter((b) => b.completed).length;
   const scheduleProgress = scheduleBlocks.length > 0 ? Math.round((completedScheduleCount / scheduleBlocks.length) * 100) : 0;
 
-  // Upcoming Exams & Assignments (sorted by date)
   const upcomingDeadlines = events
     .filter((ev) => ev.type === 'exam' || ev.type === 'assignment')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   return (
-    <div className="calendar-page-container">
+    <div className="calendar-page-container animate-fade-in">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-group">
           <h1>Calendar & Day Scheduler</h1>
           <p className="page-subtitle">
-            Manage your exam dates, assignment deadlines, and build your daily study schedule.
+            Manage your exam dates, project deadlines, and build your daily study timetable.
           </p>
         </div>
         <div className="header-actions">
@@ -413,21 +419,21 @@ const CalendarPage = () => {
         </div>
       </div>
 
-      {/* Tabs Navigation & Filters */}
-      <div className="calendar-top-bar">
+      {/* View Switcher & Filters */}
+      <div className="calendar-top-bar card glass-panel">
         <div className="view-tab-group">
           <button
             className={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
-            onClick={() => setActiveTab('calendar')}
+            onClick={() => { playClickSound(); setActiveTab('calendar'); }}
           >
-            <CalendarIcon size={18} />
+            <CalendarIcon size={16} />
             <span>Month Calendar</span>
           </button>
           <button
             className={`tab-btn ${activeTab === 'scheduler' ? 'active' : ''}`}
-            onClick={() => setActiveTab('scheduler')}
+            onClick={() => { playClickSound(); setActiveTab('scheduler'); }}
           >
-            <Clock size={18} />
+            <Clock size={16} />
             <span>Day Scheduler</span>
             {scheduleBlocks.length > 0 && (
               <span className="tab-pill">{completedScheduleCount}/{scheduleBlocks.length}</span>
@@ -435,10 +441,10 @@ const CalendarPage = () => {
           </button>
           <button
             className={`tab-btn ${activeTab === 'deadlines' ? 'active' : ''}`}
-            onClick={() => setActiveTab('deadlines')}
+            onClick={() => { playClickSound(); setActiveTab('deadlines'); }}
           >
-            <AlertCircle size={18} />
-            <span>Exams & Assignments</span>
+            <AlertCircle size={16} />
+            <span>Exams & Deadlines</span>
             {upcomingDeadlines.length > 0 && (
               <span className="tab-pill alert-pill">{upcomingDeadlines.length}</span>
             )}
@@ -447,21 +453,21 @@ const CalendarPage = () => {
 
         <div className="filter-group">
           <div className="filter-item">
-            <Filter size={15} />
+            <Filter size={14} />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="filter-select"
             >
-              <option value="all">All Event Types</option>
+              <option value="all">All Types</option>
               <option value="exam">🎓 Exams Only</option>
-              <option value="assignment">📝 Assignments Only</option>
+              <option value="assignment">📝 Deadlines Only</option>
               <option value="study">📚 Study Sessions</option>
             </select>
           </div>
 
           <div className="filter-item">
-            <BookOpen size={15} />
+            <BookOpen size={14} />
             <select
               value={filterSubject}
               onChange={(e) => setFilterSubject(e.target.value)}
@@ -483,29 +489,27 @@ const CalendarPage = () => {
           <div className="spinner"></div>
         </div>
       ) : activeTab === 'calendar' ? (
-        /* ================= CALENDAR VIEW ================= */
+        /* Month Calendar View */
         <div className="calendar-grid-wrapper">
-          <div className="calendar-card">
+          <div className="calendar-card card glass-panel">
             <div className="calendar-header-nav">
-              <div className="month-year-title">
-                <h2>
-                  {MONTH_NAMES[month]} {year}
-                </h2>
-              </div>
+              <h2 className="month-title">
+                {MONTH_NAMES[month]} {year}
+              </h2>
               <div className="nav-btn-group">
                 <button onClick={handleToday} className="btn-today">
                   Today
                 </button>
                 <button onClick={handlePrevMonth} className="btn-icon-nav" title="Previous Month">
-                  <ChevronLeft size={20} />
+                  <ChevronLeft size={18} />
                 </button>
                 <button onClick={handleNextMonth} className="btn-icon-nav" title="Next Month">
-                  <ChevronRight size={20} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Day Labels */}
+            {/* Weekday headers */}
             <div className="calendar-weekdays">
               {DAYS_OF_WEEK.map((d) => (
                 <div key={d} className="weekday-header">
@@ -516,7 +520,6 @@ const CalendarPage = () => {
 
             {/* Month Days Grid */}
             <div className="calendar-days-grid">
-              {/* Previous Month Padding Days */}
               {Array.from({ length: firstDayOfMonth }).map((_, idx) => {
                 const dayNum = prevMonthDays - firstDayOfMonth + idx + 1;
                 return (
@@ -526,15 +529,13 @@ const CalendarPage = () => {
                 );
               })}
 
-              {/* Current Month Days */}
               {Array.from({ length: daysInMonth }).map((_, idx) => {
                 const dayNum = idx + 1;
                 const dObj = new Date(year, month, dayNum);
                 const dateStr = dObj.toISOString().split('T')[0];
                 const dayEvents = getEventsForDate(dObj);
 
-                const isToday =
-                  new Date().toISOString().split('T')[0] === dateStr;
+                const isToday = new Date().toISOString().split('T')[0] === dateStr;
                 const isSelected = selectedDateStr === dateStr;
 
                 return (
@@ -578,7 +579,7 @@ const CalendarPage = () => {
           </div>
 
           {/* Selected Date Detail Drawer */}
-          <div className="date-detail-sidebar">
+          <div className="date-detail-sidebar card glass-panel">
             <div className="sidebar-date-header">
               <h3>
                 {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
@@ -598,7 +599,7 @@ const CalendarPage = () => {
             <div className="sidebar-section">
               <h4>Exams & Deadlines</h4>
               {getEventsForDate(new Date(selectedDateStr + 'T00:00:00')).length === 0 ? (
-                <p className="no-items-text">No exams or deadlines set for this day.</p>
+                <p className="no-items-text">No exams or deadlines set for this date.</p>
               ) : (
                 <div className="sidebar-event-list">
                   {getEventsForDate(new Date(selectedDateStr + 'T00:00:00')).map((ev) => (
@@ -620,19 +621,16 @@ const CalendarPage = () => {
                         </span>
                         <div className="event-meta">
                           {renderTypeBadge(ev.type)}
-                          {ev.time && <span className="time-tag"><Clock size={12} /> {ev.time}</span>}
-                          {ev.subject?.name && (
-                            <span className="subject-tag"><BookOpen size={12} /> {ev.subject.name}</span>
-                          )}
+                          {ev.time && <span className="time-tag"><Clock size={11} /> {ev.time}</span>}
                         </div>
                       </div>
 
                       <div className="item-actions">
                         <button onClick={() => openEditEvent(ev)} title="Edit">
-                          <Edit2 size={14} />
+                          <Edit2 size={13} />
                         </button>
                         <button onClick={() => handleDeleteEvent(ev._id)} title="Delete" className="text-danger">
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </div>
@@ -641,7 +639,6 @@ const CalendarPage = () => {
               )}
             </div>
 
-            {/* Day Scheduler Quick Overview in Sidebar */}
             <div className="sidebar-section">
               <div className="section-header-row">
                 <h4>Day Schedule</h4>
@@ -649,7 +646,7 @@ const CalendarPage = () => {
                   className="btn-link-action"
                   onClick={() => setActiveTab('scheduler')}
                 >
-                  View Scheduler →
+                  Full Scheduler →
                 </button>
               </div>
 
@@ -661,7 +658,7 @@ const CalendarPage = () => {
                     style={{ marginTop: '0.5rem' }}
                     onClick={() => openAddSchedule('09:00')}
                   >
-                    + Add Time Block
+                    + Add Slot
                   </button>
                 </div>
               ) : (
@@ -692,9 +689,9 @@ const CalendarPage = () => {
           </div>
         </div>
       ) : activeTab === 'scheduler' ? (
-        /* ================= DAY SCHEDULER VIEW ================= */
+        /* Day Scheduler View */
         <div className="day-scheduler-container">
-          <div className="scheduler-header-card">
+          <div className="scheduler-header-card card glass-panel">
             <div className="scheduler-date-selector">
               <button
                 className="btn-icon-nav"
@@ -704,7 +701,7 @@ const CalendarPage = () => {
                   handleSelectDate(prev.toISOString().split('T')[0]);
                 }}
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={18} />
               </button>
               <input
                 type="date"
@@ -720,7 +717,7 @@ const CalendarPage = () => {
                   handleSelectDate(next.toISOString().split('T')[0]);
                 }}
               >
-                <ChevronRight size={20} />
+                <ChevronRight size={18} />
               </button>
               <button onClick={handleToday} className="btn-today">
                 Today
@@ -730,7 +727,7 @@ const CalendarPage = () => {
             <div className="scheduler-progress-box">
               <div className="progress-text-row">
                 <span>Daily Completion</span>
-                <strong>{completedScheduleCount} / {scheduleBlocks.length} Blocks ({scheduleProgress}%)</strong>
+                <strong>{completedScheduleCount} / {scheduleBlocks.length} Slots ({scheduleProgress}%)</strong>
               </div>
               <div className="progress-bar-track">
                 <div className="progress-bar-fill" style={{ width: `${scheduleProgress}%` }} />
@@ -753,13 +750,12 @@ const CalendarPage = () => {
             </div>
           </div>
 
-          {/* Time Slot Grid */}
           <div className="time-slots-grid">
             {scheduleBlocks.length === 0 ? (
-              <div className="empty-state">
-                <Clock size={40} className="empty-icon" />
-                <h3>No schedule blocks for this day</h3>
-                <p>Add custom time slots or click "Auto-Generate Study Plan" to automatically build your day from pending topics!</p>
+              <div className="empty-state card">
+                <Clock size={36} color="var(--primary)" />
+                <h3>No schedule blocks for this date</h3>
+                <p>Click "Auto-Generate Study Plan" to automatically build your day from pending topics!</p>
                 <div className="empty-action-row">
                   <button className="btn btn-primary" onClick={() => openAddSchedule('09:00')}>
                     + Add Time Slot
@@ -778,7 +774,7 @@ const CalendarPage = () => {
                       <span className="end-time">{block.endTime}</span>
                     </div>
 
-                    <div className="block-card">
+                    <div className="block-card card glass-panel">
                       <div className="block-card-header">
                         <div className="block-title-row">
                           <button
@@ -786,9 +782,9 @@ const CalendarPage = () => {
                             onClick={() => handleToggleSchedule(block._id)}
                           >
                             {block.completed ? (
-                              <CheckCircle2 size={20} className="active" />
+                              <CheckCircle2 size={20} color="var(--success)" className="active animated-check" />
                             ) : (
-                              <Circle size={20} />
+                              <Circle size={20} color="var(--text-light)" />
                             )}
                           </button>
                           <h4 className={block.completed ? 'strikethrough' : ''}>{block.title}</h4>
@@ -796,10 +792,10 @@ const CalendarPage = () => {
 
                         <div className="block-actions">
                           <button onClick={() => openEditSchedule(block)} title="Edit">
-                            <Edit2 size={15} />
+                            <Edit2 size={14} />
                           </button>
                           <button onClick={() => handleDeleteSchedule(block._id)} title="Delete" className="text-danger">
-                            <Trash2 size={15} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
@@ -821,7 +817,7 @@ const CalendarPage = () => {
           </div>
         </div>
       ) : (
-        /* ================= DEADLINES & EXAMS TRACKER VIEW ================= */
+        /* Deadlines Hub View */
         <div className="deadlines-container">
           <div className="deadlines-header-row">
             <h2>Upcoming Exams & Assignment Deadlines</h2>
@@ -831,8 +827,8 @@ const CalendarPage = () => {
           </div>
 
           {upcomingDeadlines.length === 0 ? (
-            <div className="empty-state">
-              <GraduationCap size={40} className="empty-icon" />
+            <div className="empty-state card">
+              <GraduationCap size={36} color="var(--primary)" />
               <h3>No upcoming exams or assignments scheduled</h3>
               <p>Add your exam dates and project deadlines to keep track of remaining days.</p>
               <button className="btn btn-primary" onClick={() => openAddEvent()}>
@@ -842,7 +838,7 @@ const CalendarPage = () => {
           ) : (
             <div className="deadlines-list-grid">
               {upcomingDeadlines.map((ev) => (
-                <div key={ev._id} className={`deadline-card type-${ev.type} ${ev.completed ? 'completed' : ''}`}>
+                <div key={ev._id} className={`deadline-card card glass-panel type-${ev.type} ${ev.completed ? 'completed' : ''}`}>
                   <div className="deadline-card-header">
                     <div className="type-and-countdown">
                       {renderTypeBadge(ev.type)}
@@ -850,10 +846,10 @@ const CalendarPage = () => {
                     </div>
                     <div className="item-actions">
                       <button onClick={() => openEditEvent(ev)} title="Edit">
-                        <Edit2 size={15} />
+                        <Edit2 size={14} />
                       </button>
                       <button onClick={() => handleDeleteEvent(ev._id)} title="Delete" className="text-danger">
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
@@ -862,20 +858,20 @@ const CalendarPage = () => {
 
                   <div className="deadline-details">
                     <div className="detail-item">
-                      <CalendarIcon size={15} />
+                      <CalendarIcon size={14} />
                       <span>{new Date(ev.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
 
                     {ev.time && (
                       <div className="detail-item">
-                        <Clock size={15} />
+                        <Clock size={14} />
                         <span>{ev.time}</span>
                       </div>
                     )}
 
                     {ev.subject?.name && (
                       <div className="detail-item">
-                        <BookOpen size={15} />
+                        <BookOpen size={14} />
                         <span>{ev.subject.name}</span>
                       </div>
                     )}
@@ -890,11 +886,11 @@ const CalendarPage = () => {
                     >
                       {ev.completed ? (
                         <>
-                          <Check size={16} /> Mark Incomplete
+                          <Check size={15} /> Mark Incomplete
                         </>
                       ) : (
                         <>
-                          <CheckCircle2 size={16} /> Mark Completed
+                          <CheckCircle2 size={15} /> Mark Completed
                         </>
                       )}
                     </button>
@@ -906,14 +902,14 @@ const CalendarPage = () => {
         </div>
       )}
 
-      {/* ================= MODAL: ADD/EDIT EVENT ================= */}
+      {/* Modal: Event */}
       {showEventModal && (
         <div className="modal-backdrop">
-          <div className="modal-card">
+          <div className="modal-card card glass-panel">
             <div className="modal-header">
               <h3>{editingEvent ? 'Edit Event / Deadline' : 'Add Exam / Deadline'}</h3>
-              <button className="btn-close-modal" onClick={() => setShowEventModal(false)}>
-                <X size={20} />
+              <button className="btn-close-modal icon-btn-ghost" onClick={() => setShowEventModal(false)}>
+                <X size={18} />
               </button>
             </div>
 
@@ -923,7 +919,7 @@ const CalendarPage = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Midterm Physics Exam, CS Assignment 2"
+                  placeholder="e.g. Midterm DBMS Exam, OS Lab Submission"
                   value={eventForm.title}
                   onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
                   className="form-control"
@@ -987,19 +983,6 @@ const CalendarPage = () => {
               </div>
 
               <div className="form-group">
-                <label>Priority</label>
-                <select
-                  value={eventForm.priority}
-                  onChange={(e) => setEventForm({ ...eventForm, priority: e.target.value })}
-                  className="form-control"
-                >
-                  <option value="low">🟢 Low</option>
-                  <option value="medium">🟡 Medium</option>
-                  <option value="high">🔴 High (Urgent)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
                 <label>Description / Notes</label>
                 <textarea
                   rows="3"
@@ -1027,14 +1010,14 @@ const CalendarPage = () => {
         </div>
       )}
 
-      {/* ================= MODAL: ADD/EDIT SCHEDULE BLOCK ================= */}
+      {/* Modal: Schedule Block */}
       {showScheduleModal && (
         <div className="modal-backdrop">
-          <div className="modal-card">
+          <div className="modal-card card glass-panel">
             <div className="modal-header">
               <h3>{editingSchedule ? 'Edit Schedule Slot' : 'Add Schedule Slot'}</h3>
-              <button className="btn-close-modal" onClick={() => setShowScheduleModal(false)}>
-                <X size={20} />
+              <button className="btn-close-modal icon-btn-ghost" onClick={() => setShowScheduleModal(false)}>
+                <X size={18} />
               </button>
             </div>
 
@@ -1044,39 +1027,11 @@ const CalendarPage = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Math Chapter 4 Revision, Project Coding"
+                  placeholder="e.g. DBMS Unit 2 Normalization Practice"
                   value={scheduleForm.title}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })}
                   className="form-control"
                 />
-              </div>
-
-              <div className="form-row-2">
-                <div className="form-group">
-                  <label>Date *</label>
-                  <input
-                    type="date"
-                    required
-                    value={scheduleForm.date}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, date: e.target.value })}
-                    className="form-control"
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Type</label>
-                  <select
-                    value={scheduleForm.type}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, type: e.target.value })}
-                    className="form-control"
-                  >
-                    <option value="study">📚 Study</option>
-                    <option value="exam">🎓 Exam Test</option>
-                    <option value="assignment">📝 Assignment Work</option>
-                    <option value="break">☕ Break</option>
-                    <option value="other">📌 Other</option>
-                  </select>
-                </div>
               </div>
 
               <div className="form-row-2">
@@ -1119,17 +1074,6 @@ const CalendarPage = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="form-group">
-                <label>Notes / Goal</label>
-                <textarea
-                  rows="2"
-                  placeholder="Goals for this session..."
-                  value={scheduleForm.notes}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })}
-                  className="form-control"
-                ></textarea>
               </div>
 
               <div className="modal-footer">

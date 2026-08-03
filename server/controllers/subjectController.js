@@ -105,6 +105,7 @@ const getSubjectById = async (req, res) => {
           _id: unit._id,
           unitNumber: unit.unitNumber,
           title: unit.title,
+          unitName: unit.title,
           totalTopics: unitTotalCount,
           completedTopics: unitCompletedCount,
           progressPercentage: unitPercentage,

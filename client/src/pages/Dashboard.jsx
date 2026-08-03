@@ -14,17 +14,31 @@ import {
   CheckCircle2,
   Circle,
   Layers,
+  Sparkles,
+  Search,
+  Check,
+  Flame,
+  Award,
 } from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
 import SubjectCard from '../components/SubjectCard';
+import TimetableWidget from '../components/TimetableWidget';
+import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const { playCheckSound, playClickSound, playDeleteSound } = useTheme();
+
   const [subjects, setSubjects] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
 
   const fetchDashboardData = async () => {
     try {
@@ -47,7 +61,7 @@ const Dashboard = () => {
       setError('');
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
-      setError('Failed to load dashboard. Please check if the server is running.');
+      setError('Failed to load command center. Please ensure server is running.');
     } finally {
       setLoading(false);
     }
@@ -58,6 +72,7 @@ const Dashboard = () => {
   }, []);
 
   const handleDeleteSubject = async (id, name) => {
+    playDeleteSound();
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
         await api.delete(`/subjects/${id}`);
@@ -70,6 +85,10 @@ const Dashboard = () => {
   };
 
   const handleToggleSchedule = async (id) => {
+    const targetBlock = todaySchedule.find((b) => b._id === id);
+    const nextState = !targetBlock?.completed;
+    playCheckSound(nextState);
+
     try {
       const res = await api.patch(`/schedule/${id}/toggle`);
       setTodaySchedule(todaySchedule.map((b) => (b._id === id ? res.data : b)));
@@ -86,6 +105,12 @@ const Dashboard = () => {
 
   const completedTodayCount = todaySchedule.filter((b) => b.completed).length;
 
+  const filteredSubjects = subjects.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.code && s.code.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   if (loading) {
     return (
       <div className="spinner-container">
@@ -95,224 +120,252 @@ const Dashboard = () => {
   }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-title-group">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-            <span className="section-badge">
-              <BookOpen size={12} />
-              B.Tech CSE - Section A
+    <div className="command-center-container animate-fade-in">
+      {/* Hero Welcome Banner */}
+      <div className="hero-command-banner card glass-panel glow-border">
+        <div className="hero-content">
+          <div className="hero-badge-row">
+            <span className="hero-tag glow-badge">
+              <Sparkles size={13} /> Command Center
             </span>
-            <span className="meta-pill">Semester 5</span>
+            <span className="hero-tag-secondary">B.Tech CSE • Section A</span>
+            <span className="hero-tag-secondary">Semester 5</span>
           </div>
-          <h1>Academic Dashboard</h1>
-          <p className="page-subtitle">Track your syllabus progress, exams, and daily study schedule.</p>
+
+          <h1 className="hero-title">
+            Welcome back, <span className="highlight-gradient">{firstName}</span>
+          </h1>
+
+          <p className="hero-subtitle">
+            You've completed <strong>{completedTopics}</strong> of <strong>{totalTopics}</strong> syllabus topics for Section A. Keep pushing forward!
+          </p>
+
+          <div className="hero-actions-row">
+            <Link to="/subjects" className="btn btn-primary" onClick={playClickSound}>
+              <Layers size={17} />
+              <span>Explore Section Syllabus</span>
+            </Link>
+            <Link to="/calendar" className="btn btn-secondary" onClick={playClickSound}>
+              <Calendar size={17} />
+              <span>Study Scheduler</span>
+            </Link>
+          </div>
         </div>
-        <div className="header-actions">
-          <Link to="/subjects" className="btn btn-primary">
-            <Layers size={18} />
-            <span>Subjects & Syllabus</span>
-          </Link>
-          <Link to="/calendar" className="btn btn-secondary">
-            <Calendar size={18} />
-            <span>Calendar & Schedule</span>
-          </Link>
+
+        {/* Circular Progress Gauge / Banner Widget */}
+        <div className="hero-gauge-box">
+          <div className="gauge-circle-wrapper">
+            <svg viewBox="0 0 100 100" className="gauge-svg">
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                className="gauge-track"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                className="gauge-fill"
+                style={{
+                  strokeDasharray: 264,
+                  strokeDashoffset: 264 - (264 * overallPercentage) / 100,
+                }}
+              />
+            </svg>
+            <div className="gauge-center-text">
+              <span className="gauge-percentage">{overallPercentage}%</span>
+              <span className="gauge-label">Syllabus Done</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="empty-state" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
+        <div className="empty-state card" style={{ borderColor: 'var(--danger)', marginBottom: '1.5rem' }}>
           <p style={{ color: 'var(--danger)' }}>{error}</p>
-          <button onClick={fetchDashboardData} className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
+          <button
+            onClick={() => {
+              playClickSound();
+              fetchDashboardData();
+            }}
+            className="btn btn-secondary"
+            style={{ marginTop: '0.5rem' }}
+          >
             Retry
           </button>
         </div>
       )}
 
-      {/* Banner Card */}
-      <div className="overview-banner">
-        <div className="overview-details">
-          <h2>Section A Syllabus & Progress</h2>
-          <p>You have completed {completedTopics} out of {totalTopics} total syllabus topics across your subjects.</p>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-            <Link to="/subjects" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
-              Explore Subjects Syllabus
-            </Link>
-            <Link to="/calendar" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
-              + Plan Daily Schedule
-            </Link>
-          </div>
-        </div>
-
-        <div className="progress-bar-container">
-          <div className="progress-bar-label">
-            <span>Overall Syllabus Progress</span>
-            <span>{overallPercentage}%</span>
-          </div>
-          <div className="progress-bar-track">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${overallPercentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
+      {/* Key Metrics Stats Grid */}
       <div className="stats-grid">
         <StatCard
           title="Section Subjects"
           value={totalSubjects}
+          subtitle="Core CSE 5th Sem"
           icon={BookOpen}
           color="blue"
         />
         <StatCard
           title="Total Syllabus Topics"
           value={totalTopics}
+          subtitle="All Units & Modules"
           icon={ListTodo}
           color="amber"
         />
         <StatCard
-          title="Completed Topics"
+          title="Topics Completed"
           value={completedTopics}
+          subtitle="Verified Progress"
           icon={CheckCircle}
           color="green"
         />
         <StatCard
           title="Overall Progress"
           value={`${overallPercentage}%`}
+          subtitle="Semester Completion"
           icon={TrendingUp}
-          color="blue"
+          color="purple"
         />
       </div>
 
-      {/* Quick Access Widgets: Deadlines & Today's Schedule */}
-      <div className="dashboard-widgets-grid">
-        {/* Widget 1: Upcoming Exams & Deadlines */}
-        <div className="dash-widget-card">
-          <div className="widget-header">
-            <div className="widget-title">
-              <GraduationCap size={20} className="text-primary" />
-              <h3>Exams & Deadlines</h3>
-            </div>
-            <Link to="/calendar" className="widget-link">
-              View All <ArrowRight size={14} />
-            </Link>
-          </div>
+      {/* Section A Class Timetable Widget & Today's Schedule Grid */}
+      <div className="dash-two-col-grid" style={{ marginBottom: '2rem' }}>
+        {/* Widget 1: Section A Class Schedule */}
+        <TimetableWidget />
 
-          {upcomingEvents.length === 0 ? (
-            <div className="widget-empty">
-              <AlertCircle size={24} />
-              <p>No exams or assignments scheduled.</p>
-              <Link to="/calendar" className="btn btn-sm btn-secondary">
-                + Add Exam Date
+        {/* Widget 2: Today's Study Sessions & Deadlines */}
+        <div className="dash-widget-column">
+          {/* Today's Study Sessions */}
+          <div className="dash-widget-card card glass-panel">
+            <div className="widget-header">
+              <div className="widget-title">
+                <Clock size={19} color="var(--primary)" />
+                <h3>Today's Study Plan ({completedTodayCount}/{todaySchedule.length})</h3>
+              </div>
+              <Link to="/calendar" className="widget-link" onClick={playClickSound}>
+                Full Scheduler <ArrowRight size={14} />
               </Link>
             </div>
-          ) : (
-            <div className="widget-items-list">
-              {upcomingEvents.map((ev) => (
-                <div key={ev._id} className="widget-item">
-                  <span className={`chip-badge chip-${ev.type}`}>
-                    {ev.type === 'exam' ? '🎓 Exam' : '📝 Deadline'}
-                  </span>
-                  <div className="widget-item-info">
-                    <strong>{ev.title}</strong>
-                    <span className="widget-item-date">
-                      {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      {ev.subject?.name ? ` • ${ev.subject.name}` : ''}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Widget 2: Today's Day Schedule */}
-        <div className="dash-widget-card">
-          <div className="widget-header">
-            <div className="widget-title">
-              <Clock size={20} className="text-primary" />
-              <h3>Today's Study Schedule ({completedTodayCount}/{todaySchedule.length})</h3>
-            </div>
-            <Link to="/calendar" className="widget-link">
-              Day Scheduler <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          {todaySchedule.length === 0 ? (
-            <div className="widget-empty">
-              <Clock size={24} />
-              <p>No study slots scheduled for today.</p>
-              <Link to="/calendar" className="btn btn-sm btn-primary">
-                + Plan Today's Schedule
-              </Link>
-            </div>
-          ) : (
-            <div className="widget-items-list">
-              {todaySchedule.map((block) => (
-                <div key={block._id} className="widget-item schedule-item">
-                  <button
-                    className="btn-toggle-check"
+            {todaySchedule.length === 0 ? (
+              <div className="widget-empty">
+                <Clock size={28} className="empty-icon-muted" />
+                <p>No study slots scheduled for today.</p>
+                <Link to="/calendar" className="btn btn-sm btn-primary" onClick={playClickSound}>
+                  + Auto-Plan Study Schedule
+                </Link>
+              </div>
+            ) : (
+              <div className="widget-items-list">
+                {todaySchedule.map((block) => (
+                  <div
+                    key={block._id}
+                    className={`widget-item card ${block.completed ? 'completed' : ''}`}
                     onClick={() => handleToggleSchedule(block._id)}
                   >
-                    {block.completed ? (
-                      <CheckCircle2 size={18} className="active" />
-                    ) : (
-                      <Circle size={18} />
-                    )}
-                  </button>
-                  <div className="widget-item-info">
-                    <strong className={block.completed ? 'strikethrough' : ''}>
-                      {block.startTime} - {block.endTime}: {block.title}
-                    </strong>
-                    {block.subject?.name && (
-                      <span className="widget-item-date">{block.subject.name}</span>
-                    )}
+                    <button className="check-trigger-btn">
+                      {block.completed ? (
+                        <CheckCircle2 size={18} color="var(--success)" className="animated-check" />
+                      ) : (
+                        <Circle size={18} color="var(--text-light)" />
+                      )}
+                    </button>
+                    <div className="widget-item-info">
+                      <span className={`block-title ${block.completed ? 'strikethrough' : ''}`}>
+                        {block.startTime} - {block.endTime}: {block.title}
+                      </span>
+                      {block.subject?.name && (
+                        <span className="block-sub-badge">{block.subject.name}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Exams & Deadlines Widget */}
+          <div className="dash-widget-card card glass-panel" style={{ marginTop: '1.25rem' }}>
+            <div className="widget-header">
+              <div className="widget-title">
+                <GraduationCap size={19} color="var(--primary)" />
+                <h3>Exams & Deadlines</h3>
+              </div>
+              <Link to="/calendar" className="widget-link" onClick={playClickSound}>
+                View All <ArrowRight size={14} />
+              </Link>
             </div>
-          )}
+
+            {upcomingEvents.length === 0 ? (
+              <div className="widget-empty">
+                <AlertCircle size={28} className="empty-icon-muted" />
+                <p>No upcoming exams or assignments.</p>
+                <Link to="/calendar" className="btn btn-sm btn-secondary" onClick={playClickSound}>
+                  + Add Deadline
+                </Link>
+              </div>
+            ) : (
+              <div className="widget-items-list">
+                {upcomingEvents.map((ev) => (
+                  <div key={ev._id} className="widget-item card">
+                    <span className={`code-pill ${ev.type === 'exam' ? 'pill-exam' : 'pill-assignment'}`}>
+                      {ev.type === 'exam' ? '🎓 Exam' : '📝 Deadline'}
+                    </span>
+                    <div className="widget-item-info">
+                      <strong className="ev-title">{ev.title}</strong>
+                      <span className="ev-date">
+                        {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {ev.subject?.name ? ` • ${ev.subject.name}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Subjects Grid */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 className="section-title" style={{ marginBottom: 0 }}>
-            Section A Subjects ({totalSubjects})
-          </h2>
-          <Link to="/subjects" className="widget-link">
-            View All Subjects & Syllabus <ArrowRight size={14} />
+      {/* Section A Subjects Directory */}
+      <div className="subjects-section-header">
+        <div className="title-group">
+          <h2>Section A Subjects & Syllabus ({totalSubjects})</h2>
+          <p className="subtitle">Core engineering subjects for 5th semester B.Tech CSE</p>
+        </div>
+
+        <div className="subject-search-box">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search subject or course code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {filteredSubjects.length === 0 ? (
+        <div className="empty-state card">
+          <BookOpen size={36} color="var(--primary)" />
+          <h3>No subjects found</h3>
+          <p>No subject matches your search query or no subjects have been added.</p>
+          <Link to="/add-subject" className="btn btn-primary" onClick={playClickSound}>
+            <PlusCircle size={18} />
+            <span>Add Custom Subject</span>
           </Link>
         </div>
-
-        {subjects.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <BookOpen size={28} />
-            </div>
-            <h3>No subjects added yet</h3>
-            <p>Start tracking your syllabus by adding your subjects and topics.</p>
-            <Link to="/add-subject" className="btn btn-primary">
-              <PlusCircle size={18} />
-              <span>Add Your First Subject</span>
-            </Link>
-          </div>
-        ) : (
-          <div className="subject-grid">
-            {subjects.map((subject) => (
-              <SubjectCard
-                key={subject._id}
-                subject={subject}
-                onDelete={handleDeleteSubject}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="subject-grid">
+          {filteredSubjects.map((subject) => (
+            <SubjectCard
+              key={subject._id}
+              subject={subject}
+              onDelete={handleDeleteSubject}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

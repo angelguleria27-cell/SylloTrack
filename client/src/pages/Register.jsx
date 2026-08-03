@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, User, Mail, Lock, Eye, EyeOff, UserPlus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const Register = () => {
+  const { playClickSound, playSuccessSound } = useTheme();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,6 +27,7 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    playClickSound();
 
     if (!formData.name.trim() || !formData.email.trim() || !formData.password || !formData.confirmPassword) {
       setError('Please fill in all required fields.');
@@ -50,6 +54,7 @@ const Register = () => {
       setIsSubmitting(true);
       setError('');
       await register(formData.name.trim(), formData.email.trim(), formData.password);
+      playSuccessSound();
       navigate('/', { replace: true });
     } catch (err) {
       console.error('Registration error:', err);
@@ -62,12 +67,12 @@ const Register = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="auth-page animate-fade-in">
       <div className="auth-container">
         {/* Left Side: Branding / Feature Highlights */}
         <div className="auth-branding">
           <div className="branding-content">
-            <div className="brand-logo-large">
+            <div className="brand-logo-large glow-badge">
               <BookOpen size={36} />
             </div>
             <h1 className="brand-headline">Join SylloTrack</h1>
@@ -95,7 +100,7 @@ const Register = () => {
 
         {/* Right Side: Auth Form */}
         <div className="auth-card-wrapper">
-          <div className="auth-card">
+          <div className="auth-card card glass-panel">
             <div className="auth-card-header">
               <h2>Create Account 🚀</h2>
               <p>Start managing your syllabus effectively today</p>
@@ -117,6 +122,7 @@ const Register = () => {
                     type="text"
                     id="name"
                     name="name"
+                    className="form-control"
                     placeholder="Alex Morgan"
                     value={formData.name}
                     onChange={handleChange}
@@ -134,6 +140,7 @@ const Register = () => {
                     type="email"
                     id="email"
                     name="email"
+                    className="form-control"
                     placeholder="student@university.edu"
                     value={formData.email}
                     onChange={handleChange}
@@ -151,6 +158,7 @@ const Register = () => {
                     type={showPassword ? 'text' : 'password'}
                     id="password"
                     name="password"
+                    className="form-control"
                     placeholder="At least 6 characters"
                     value={formData.password}
                     onChange={handleChange}
@@ -159,8 +167,8 @@ const Register = () => {
                   />
                   <button
                     type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
+                    className="password-toggle-btn icon-btn-ghost"
+                    onClick={() => { playClickSound(); setShowPassword(!showPassword); }}
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -176,6 +184,7 @@ const Register = () => {
                     type={showPassword ? 'text' : 'password'}
                     id="confirmPassword"
                     name="confirmPassword"
+                    className="form-control"
                     placeholder="Repeat password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
@@ -189,6 +198,7 @@ const Register = () => {
                 type="submit"
                 className="btn btn-primary btn-auth"
                 disabled={isSubmitting}
+                style={{ width: '100%', marginTop: '0.5rem' }}
               >
                 {isSubmitting ? (
                   <>
@@ -204,10 +214,10 @@ const Register = () => {
               </button>
             </form>
 
-            <div className="auth-footer">
+            <div className="auth-footer" style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <p>
                 Already have an account?{' '}
-                <Link to="/login" className="auth-link">
+                <Link to="/login" onClick={playClickSound} className="auth-link" style={{ color: 'var(--primary)', fontWeight: 700 }}>
                   Sign In
                 </Link>
               </p>
