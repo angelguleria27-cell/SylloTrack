@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getSubjects,
   getSubjectById,
+  toggleTopicCompletion,
   createSubject,
   updateSubject,
   deleteSubject,
@@ -14,6 +15,8 @@ router.use(protect);
 router.route('/')
   .get(getSubjects)
   .post(createSubject);
+
+router.post('/:id/toggle-topic', toggleTopicCompletion);
 
 router.route('/:id')
   .get(getSubjectById)

@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import SubjectsPage from './pages/SubjectsPage';
 import AddSubject from './pages/AddSubject';
 import SubjectDetail from './pages/SubjectDetail';
 import EditSubject from './pages/EditSubject';
@@ -44,6 +45,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subjects"
+                element={
+                  <ProtectedRoute>
+                    <SubjectsPage />
                   </ProtectedRoute>
                 }
               />

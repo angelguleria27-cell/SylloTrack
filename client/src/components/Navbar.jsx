@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookOpen, PlusCircle, LayoutDashboard, Calendar, LogOut, User } from 'lucide-react';
+import { BookOpen, LayoutDashboard, Calendar, LogOut, User, GraduationCap, Layers } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -14,21 +14,27 @@ const Navbar = () => {
   };
 
   if (!isAuthenticated) {
-    return null; // Don't show top nav on auth pages (or show simple logo header if desired)
+    return null;
   }
 
-  // Get first name or initial
   const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
 
   return (
     <header className="navbar">
       <div className="nav-container">
-        <Link to="/" className="brand">
-          <div className="brand-icon">
-            <BookOpen size={22} />
-          </div>
-          <span>SylloTrack</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <Link to="/" className="brand">
+            <div className="brand-icon">
+              <GraduationCap size={24} />
+            </div>
+            <span>SylloTrack</span>
+          </Link>
+          <span className="section-badge">
+            <BookOpen size={13} />
+            <span>Sec A CSE</span>
+          </span>
+        </div>
+
         <nav className="nav-links">
           <Link
             to="/"
@@ -38,18 +44,18 @@ const Navbar = () => {
             <span>Dashboard</span>
           </Link>
           <Link
+            to="/subjects"
+            className={`nav-link ${location.pathname.startsWith('/subject') ? 'active' : ''}`}
+          >
+            <Layers size={18} />
+            <span>Subjects</span>
+          </Link>
+          <Link
             to="/calendar"
             className={`nav-link ${location.pathname === '/calendar' ? 'active' : ''}`}
           >
             <Calendar size={18} />
             <span>Calendar & Scheduler</span>
-          </Link>
-          <Link
-            to="/add-subject"
-            className="nav-link btn-primary-nav"
-          >
-            <PlusCircle size={18} />
-            <span>Add Subject</span>
           </Link>
 
           {/* User profile & Logout */}

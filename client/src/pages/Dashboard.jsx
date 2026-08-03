@@ -13,6 +13,7 @@ import {
   GraduationCap,
   CheckCircle2,
   Circle,
+  Layers,
 } from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
@@ -57,7 +58,7 @@ const Dashboard = () => {
   }, []);
 
   const handleDeleteSubject = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name}" and all its topics?`)) {
+    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
       try {
         await api.delete(`/subjects/${id}`);
         setSubjects(subjects.filter((s) => s._id !== id));
@@ -95,19 +96,27 @@ const Dashboard = () => {
 
   return (
     <div>
+      {/* Page Header */}
       <div className="page-header">
         <div className="page-title-group">
-          <h1>Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+            <span className="section-badge">
+              <BookOpen size={12} />
+              B.Tech CSE - Section A
+            </span>
+            <span className="meta-pill">Semester 5</span>
+          </div>
+          <h1>Academic Dashboard</h1>
           <p className="page-subtitle">Track your syllabus progress, exams, and daily study schedule.</p>
         </div>
         <div className="header-actions">
+          <Link to="/subjects" className="btn btn-primary">
+            <Layers size={18} />
+            <span>Subjects & Syllabus</span>
+          </Link>
           <Link to="/calendar" className="btn btn-secondary">
             <Calendar size={18} />
             <span>Calendar & Schedule</span>
-          </Link>
-          <Link to="/add-subject" className="btn btn-primary">
-            <PlusCircle size={18} />
-            <span>Add Subject</span>
           </Link>
         </div>
       </div>
@@ -124,16 +133,21 @@ const Dashboard = () => {
       {/* Banner Card */}
       <div className="overview-banner">
         <div className="overview-details">
-          <h2>Syllabus & Goal Mastery</h2>
-          <p>You have completed {completedTopics} out of {totalTopics} total topics across all subjects.</p>
-          <Link to="/calendar" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
-            + Plan Schedule & Deadlines
-          </Link>
+          <h2>Section A Syllabus & Progress</h2>
+          <p>You have completed {completedTopics} out of {totalTopics} total syllabus topics across your subjects.</p>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+            <Link to="/subjects" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
+              Explore Subjects Syllabus
+            </Link>
+            <Link to="/calendar" className="btn btn-secondary" style={{ color: 'var(--primary)' }}>
+              + Plan Daily Schedule
+            </Link>
+          </div>
         </div>
 
         <div className="progress-bar-container">
           <div className="progress-bar-label">
-            <span>Overall Progress</span>
+            <span>Overall Syllabus Progress</span>
             <span>{overallPercentage}%</span>
           </div>
           <div className="progress-bar-track">
@@ -148,13 +162,13 @@ const Dashboard = () => {
       {/* Stats Cards */}
       <div className="stats-grid">
         <StatCard
-          title="Total Subjects"
+          title="Section Subjects"
           value={totalSubjects}
           icon={BookOpen}
           color="blue"
         />
         <StatCard
-          title="Total Topics"
+          title="Total Syllabus Topics"
           value={totalTopics}
           icon={ListTodo}
           color="amber"
@@ -166,7 +180,7 @@ const Dashboard = () => {
           color="green"
         />
         <StatCard
-          title="Overall Completion"
+          title="Overall Progress"
           value={`${overallPercentage}%`}
           icon={TrendingUp}
           color="blue"
@@ -266,7 +280,14 @@ const Dashboard = () => {
 
       {/* Subjects Grid */}
       <div>
-        <h2 className="section-title">Your Subjects ({totalSubjects})</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 className="section-title" style={{ marginBottom: 0 }}>
+            Section A Subjects ({totalSubjects})
+          </h2>
+          <Link to="/subjects" className="widget-link">
+            View All Subjects & Syllabus <ArrowRight size={14} />
+          </Link>
+        </div>
 
         {subjects.length === 0 ? (
           <div className="empty-state">

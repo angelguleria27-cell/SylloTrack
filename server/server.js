@@ -8,12 +8,16 @@ const topicRoutes = require('./routes/topicRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 
+const seedSubjects = require('./config/seedSubjects');
+
 dotenv.config();
 
 const app = express();
 
-// Connect Database
-connectDB();
+// Connect Database & Seed Section A Subjects
+connectDB().then(() => {
+  seedSubjects();
+});
 
 // Middleware
 app.use(cors());
