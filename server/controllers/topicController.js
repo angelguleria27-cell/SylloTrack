@@ -6,9 +6,14 @@ const { updateSubjectStats } = require('./subjectController');
 const getTopicsBySubject = async (req, res) => {
   try {
     const { subjectId } = req.params;
+    const isAdmin = req.user && req.user.role === 'admin';
 
-    // Verify subject ownership
-    const subject = await Subject.findOne({ _id: subjectId, user: req.user._id });
+    // Verify subject ownership or global access
+    const subject = await Subject.findOne(
+      isAdmin
+        ? { _id: subjectId }
+        : { _id: subjectId, $or: [{ isGlobal: true }, { user: req.user._id }] }
+    );
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found' });
     }
@@ -31,8 +36,14 @@ const createTopic = async (req, res) => {
       return res.status(400).json({ message: 'Topic title is required' });
     }
 
-    // Verify subject ownership
-    const subject = await Subject.findOne({ _id: subjectId, user: req.user._id });
+    const isAdmin = req.user && req.user.role === 'admin';
+
+    // Verify subject ownership or global access
+    const subject = await Subject.findOne(
+      isAdmin
+        ? { _id: subjectId }
+        : { _id: subjectId, $or: [{ isGlobal: true }, { user: req.user._id }] }
+    );
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found' });
     }
@@ -46,9 +57,6 @@ const createTopic = async (req, res) => {
     });
 
     await topic.save();
-
-    // Automatically update subject's totalTopics & completedTopics
-    await updateSubjectStats(subjectId);
 
     res.status(201).json(topic);
   } catch (error) {
@@ -67,8 +75,12 @@ const updateTopic = async (req, res) => {
       return res.status(404).json({ message: 'Topic not found' });
     }
 
-    // Verify subject ownership
-    const subject = await Subject.findOne({ _id: topic.subjectId, user: req.user._id });
+    const isAdmin = req.user && req.user.role === 'admin';
+    const subject = await Subject.findOne(
+      isAdmin
+        ? { _id: topic.subjectId }
+        : { _id: topic.subjectId, $or: [{ isGlobal: true }, { user: req.user._id }] }
+    );
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found or access denied' });
     }
@@ -86,10 +98,6 @@ const updateTopic = async (req, res) => {
     }
 
     await topic.save();
-
-    // Automatically update subject stats
-    await updateSubjectStats(topic.subjectId);
-
     res.json(topic);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -105,18 +113,17 @@ const deleteTopic = async (req, res) => {
       return res.status(404).json({ message: 'Topic not found' });
     }
 
-    // Verify subject ownership
-    const subject = await Subject.findOne({ _id: topic.subjectId, user: req.user._id });
+    const isAdmin = req.user && req.user.role === 'admin';
+    const subject = await Subject.findOne(
+      isAdmin
+        ? { _id: topic.subjectId }
+        : { _id: topic.subjectId, $or: [{ isGlobal: true }, { user: req.user._id }] }
+    );
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found or access denied' });
     }
 
-    const subjectId = topic.subjectId;
     await Topic.findByIdAndDelete(id);
-
-    // Automatically update subject stats
-    await updateSubjectStats(subjectId);
-
     res.json({ message: 'Topic deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });

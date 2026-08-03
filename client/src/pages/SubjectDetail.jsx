@@ -156,6 +156,7 @@ const SubjectDetail = () => {
       await api.post(`/subjects/${id}/toggle-topic`, { topicId });
     } catch (err) {
       console.error('Failed to sync topic toggle with server:', err);
+      alert('Network error: Could not sync topic progress with server. Reverting status.');
       fetchSubjectDetail();
     }
   };

@@ -23,6 +23,19 @@ export const ThemeProvider = ({ children }) => {
 
   const [soundEnabled, setSoundEnabledState] = useState(soundManager.soundEnabled);
 
+  // Time format state: '12h' (default) | '24h'
+  const [timeFormat, setTimeFormatState] = useState(() => {
+    try {
+      const savedFormat = localStorage.getItem('syllotrack_time_format');
+      if (savedFormat === '12h' || savedFormat === '24h') {
+        return savedFormat;
+      }
+    } catch (e) {
+      console.warn('Could not read time format preference:', e);
+    }
+    return '12h'; // Default to 12-hour format
+  });
+
   useEffect(() => {
     // Apply dataset attribute to documentElement
     document.documentElement.setAttribute('data-theme', theme);
@@ -40,6 +53,16 @@ export const ThemeProvider = ({ children }) => {
     soundManager.playThemeToggle(nextTheme === 'dark');
   };
 
+  const toggleTimeFormat = () => {
+    const nextFormat = timeFormat === '12h' ? '24h' : '12h';
+    setTimeFormatState(nextFormat);
+    try {
+      localStorage.setItem('syllotrack_time_format', nextFormat);
+    } catch (e) {
+      console.warn('Could not save time format preference:', e);
+    }
+  };
+
   const toggleSound = () => {
     const newState = soundManager.toggleSound();
     setSoundEnabledState(newState);
@@ -51,6 +74,8 @@ export const ThemeProvider = ({ children }) => {
   const playCelebrationSound = () => soundManager.playCelebration();
   const playDeleteSound = () => soundManager.playDelete();
 
+  const is12Hour = timeFormat === '12h';
+
   return (
     <ThemeContext.Provider
       value={{
@@ -59,6 +84,17 @@ export const ThemeProvider = ({ children }) => {
         isDark: theme === 'dark',
         soundEnabled,
         toggleSound,
+        timeFormat,
+        is12Hour,
+        toggleTimeFormat,
+        setTimeFormat: (fmt) => {
+          if (fmt === '12h' || fmt === '24h') {
+            setTimeFormatState(fmt);
+            try {
+              localStorage.setItem('syllotrack_time_format', fmt);
+            } catch (e) {}
+          }
+        },
         playClickSound,
         playCheckSound,
         playSuccessSound,

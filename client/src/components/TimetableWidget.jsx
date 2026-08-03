@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, BookOpen, MapPin } from 'lucide-react';
+import { Clock, BookOpen, MapPin, User } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
+import { formatTimeRange } from '../utils/timeFormat';
 
 const Days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const DayFullNames = {
@@ -14,7 +15,7 @@ const DayFullNames = {
 };
 
 const TimetableWidget = () => {
-  const { playClickSound } = useTheme();
+  const { playClickSound, is12Hour, toggleTimeFormat } = useTheme();
 
   const getTodayAbbr = () => {
     const dayIndex = new Date().getDay();
@@ -57,63 +58,103 @@ const TimetableWidget = () => {
           </div>
         </div>
 
-        {/* Day Tabs Switcher */}
-        <div className="timetable-days-pill">
-          {Days.map((day) => (
+        <div className="timetable-header-actions">
+          {/* 12H / 24H Time Format Toggle Switcher */}
+          <div className="time-format-switcher" title="Toggle between 12-hour and 24-hour time format">
             <button
-              key={day}
-              className={`day-pill-btn ${selectedDay === day ? 'active' : ''} ${todayAbbr === day ? 'is-today' : ''}`}
+              type="button"
+              className={`time-format-btn ${is12Hour ? 'active' : ''}`}
               onClick={() => {
-                playClickSound();
-                setSelectedDay(day);
+                if (!is12Hour) {
+                  playClickSound();
+                  toggleTimeFormat();
+                }
               }}
             >
-              {day}
-              {todayAbbr === day && <span className="today-badge">Today</span>}
+              12H
             </button>
-          ))}
+            <button
+              type="button"
+              className={`time-format-btn ${!is12Hour ? 'active' : ''}`}
+              onClick={() => {
+                if (is12Hour) {
+                  playClickSound();
+                  toggleTimeFormat();
+                }
+              }}
+            >
+              24H
+            </button>
+          </div>
+
+          {/* Day Tabs Switcher */}
+          <div className="timetable-days-pill">
+            {Days.map((day) => (
+              <button
+                key={day}
+                className={`day-pill-btn ${selectedDay === day ? 'active' : ''} ${todayAbbr === day ? 'is-today' : ''}`}
+                onClick={() => {
+                  playClickSound();
+                  setSelectedDay(day);
+                }}
+              >
+                {day}
+                {todayAbbr === day && <span className="today-badge">Today</span>}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Lectures List */}
       <div className="timetable-classes-list">
         {dayEntries.length === 0 ? (
-          <div className="widget-empty" style={{ padding: '1.5rem', textAlign: 'center' }}>
-            <Clock size={24} className="empty-icon-muted" />
-            <p style={{ margin: '0.5rem 0', color: 'var(--text-muted)' }}>No lectures scheduled for {fullDay}.</p>
+          <div className="widget-empty" style={{ padding: '2rem 1.5rem', textAlign: 'center' }}>
+            <Clock size={28} className="empty-icon-muted" />
+            <p style={{ margin: '0.5rem 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No lectures scheduled for {fullDay}.</p>
           </div>
         ) : (
-          dayEntries.map((lecture) => (
-            <div key={lecture._id} className="timetable-class-card">
-              <div className="class-time-col">
-                <span className="time-badge">{lecture.startTime} - {lecture.endTime}</span>
-                <span className="type-tag type-lecture">
-                  Class
-                </span>
-              </div>
+          dayEntries.map((lecture) => {
+            const isLab =
+              (lecture.room && (lecture.room.includes('HWL') || lecture.room.includes('CL') || lecture.room.includes('Lab'))) ||
+              (lecture.teacher && lecture.teacher.includes('Lab'));
 
-              <div className="class-details">
-                <div className="class-header-row">
-                  <span className="code-pill">{lecture.subject?.code || 'SEC-A'}</span>
-                  <span className="room-pill">
-                    <MapPin size={12} /> {lecture.room || 'LT-3'}
+            return (
+              <div key={lecture._id} className={`timetable-class-card ${isLab ? 'is-lab' : ''}`}>
+                <div className="class-time-col">
+                  <span className="time-badge">{formatTimeRange(lecture.startTime, lecture.endTime, is12Hour)}</span>
+                  <span className={`type-tag ${isLab ? 'type-lab' : 'type-lecture'}`}>
+                    {isLab ? 'Lab Session' : 'Lecture'}
                   </span>
                 </div>
-                <h4 className="class-name">{lecture.subject?.name || 'Lecture'}</h4>
-                {lecture.teacher && <span className="teacher-name" style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Faculty: {lecture.teacher}</span>}
-              </div>
 
-              <Link
-                to="/subjects"
-                onClick={playClickSound}
-                className="class-action-btn"
-                title="View Subject Syllabus"
-              >
-                <BookOpen size={16} />
-                <span>Syllabus</span>
-              </Link>
-            </div>
-          ))
+                <div className="class-details">
+                  <div className="class-header-row">
+                    <span className="code-pill">{lecture.subject?.code || 'SEC-A'}</span>
+                    <span className="room-pill">
+                      <MapPin size={12} /> {lecture.room || 'LT-3'}
+                    </span>
+                  </div>
+                  <h4 className="class-name">{lecture.subject?.name || 'Lecture'}</h4>
+                  {lecture.teacher && (
+                    <span className="teacher-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      <User size={12} /> {lecture.teacher}
+                    </span>
+                  )}
+                </div>
+
+                <Link
+                  to="/subjects"
+                  onClick={playClickSound}
+                  className="class-action-btn"
+                  title="View Subject Syllabus"
+                >
+                  <BookOpen size={15} />
+                  <span>Syllabus</span>
+                </Link>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

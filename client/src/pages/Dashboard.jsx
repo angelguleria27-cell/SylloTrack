@@ -2,34 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BookOpen,
-  CheckCircle,
   ListTodo,
+  CheckCircle,
   TrendingUp,
-  PlusCircle,
+  Sparkles,
+  Layers,
   Calendar,
   Clock,
-  AlertCircle,
   ArrowRight,
-  GraduationCap,
   CheckCircle2,
   Circle,
-  Layers,
-  Sparkles,
-  Search,
-  Check,
-  Flame,
-  Award,
+  GraduationCap,
+  AlertCircle,
 } from 'lucide-react';
 import api from '../api/axios';
 import StatCard from '../components/StatCard';
-import SubjectCard from '../components/SubjectCard';
 import TimetableWidget from '../components/TimetableWidget';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { formatTimeRange } from '../utils/timeFormat';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { playCheckSound, playClickSound, playDeleteSound } = useTheme();
+  const { playCheckSound, playClickSound, is12Hour } = useTheme();
 
   const [subjects, setSubjects] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
@@ -38,7 +33,6 @@ const Dashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
 
@@ -77,19 +71,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const handleDeleteSubject = async (id, name) => {
-    playDeleteSound();
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        await api.delete(`/subjects/${id}`);
-        setSubjects(subjects.filter((s) => s._id !== id));
-      } catch (err) {
-        console.error('Failed to delete subject:', err);
-        alert('Could not delete subject');
-      }
-    }
-  };
-
   const handleToggleSchedule = async (id) => {
     const targetBlock = todaySchedule.find((b) => b._id === id);
     const nextState = !targetBlock?.completed;
@@ -103,19 +84,12 @@ const Dashboard = () => {
     }
   };
 
-  // Calculate overall stats
   const totalSubjects = subjects.length;
   const totalTopics = subjects.reduce((acc, curr) => acc + (curr.totalTopics || 0), 0);
   const completedTopics = subjects.reduce((acc, curr) => acc + (curr.completedTopics || 0), 0);
   const overallPercentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
   const completedTodayCount = todaySchedule.filter((b) => b.completed).length;
-
-  const filteredSubjects = subjects.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.code && s.code.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
 
   if (loading) {
     return (
@@ -124,18 +98,6 @@ const Dashboard = () => {
       </div>
     );
   }
-
-  const handleToggleAssignment = async (id) => {
-    try {
-      const res = await api.patch(`/assignments/${id}/submit`);
-      playCheckSound(res.data.submitted);
-      setAssignments(
-        assignments.map((a) => (a._id === id ? { ...a, submitted: res.data.submitted } : a))
-      );
-    } catch (err) {
-      console.error('Failed to toggle assignment submission:', err);
-    }
-  };
 
   return (
     <div className="command-center-container animate-fade-in">
@@ -161,7 +123,7 @@ const Dashboard = () => {
           <div className="hero-actions-row">
             <Link to="/subjects" className="btn btn-primary" onClick={playClickSound}>
               <Layers size={17} />
-              <span>Explore Section Syllabus</span>
+              <span>Explore Subjects & Syllabus</span>
             </Link>
             <Link to="/calendar" className="btn btn-secondary" onClick={playClickSound}>
               <Calendar size={17} />
@@ -264,7 +226,7 @@ const Dashboard = () => {
       </div>
 
       {/* Section A Class Timetable Widget & Today's Schedule Grid */}
-      <div className="dash-two-col-grid" style={{ marginBottom: '2rem' }}>
+      <div className="dash-two-col-grid">
         {/* Widget 1: Section A Class Schedule */}
         <TimetableWidget />
 
@@ -307,7 +269,7 @@ const Dashboard = () => {
                     </button>
                     <div className="widget-item-info">
                       <span className={`block-title ${block.completed ? 'strikethrough' : ''}`}>
-                        {block.startTime} - {block.endTime}: {block.title}
+                        {formatTimeRange(block.startTime, block.endTime, is12Hour)}: {block.title}
                       </span>
                       {block.subject?.name && (
                         <span className="block-sub-badge">{block.subject.name}</span>
@@ -360,46 +322,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Section A Subjects Directory */}
-      <div className="subjects-section-header">
-        <div className="title-group">
-          <h2>Section A Subjects & Syllabus ({totalSubjects})</h2>
-          <p className="subtitle">Core engineering subjects for 5th semester B.Tech CSE</p>
-        </div>
-
-        <div className="subject-search-box">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search subject or course code..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {filteredSubjects.length === 0 ? (
-        <div className="empty-state card">
-          <BookOpen size={36} color="var(--primary)" />
-          <h3>No subjects found</h3>
-          <p>No subject matches your search query or no subjects have been added.</p>
-          <Link to="/add-subject" className="btn btn-primary" onClick={playClickSound}>
-            <PlusCircle size={18} />
-            <span>Add Custom Subject</span>
-          </Link>
-        </div>
-      ) : (
-        <div className="subject-grid">
-          {filteredSubjects.map((subject) => (
-            <SubjectCard
-              key={subject._id}
-              subject={subject}
-              onDelete={handleDeleteSubject}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };

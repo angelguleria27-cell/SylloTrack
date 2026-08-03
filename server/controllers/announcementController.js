@@ -3,7 +3,8 @@ const Announcement = require('../models/Announcement');
 // GET /api/announcements
 const getAnnouncements = async (req, res) => {
   try {
-    const announcements = await Announcement.find({ section: 'Section A' })
+    const userSection = req.user?.section || 'Section A';
+    const announcements = await Announcement.find({ section: userSection })
       .populate('author', 'name email role')
       .sort({ createdAt: -1 });
     res.json(announcements);

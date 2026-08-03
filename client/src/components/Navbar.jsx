@@ -11,11 +11,13 @@ import {
   Moon,
   Volume2,
   VolumeX,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const Navbar = ({ onOpenMobileMenu, onGlobalSearch }) => {
+const Navbar = ({ onOpenMobileMenu, onGlobalSearch, isCollapsed, onToggleCollapse }) => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { isDark, toggleTheme, soundEnabled, toggleSound, playClickSound } = useTheme();
@@ -41,6 +43,11 @@ const Navbar = ({ onOpenMobileMenu, onGlobalSearch }) => {
     return 'SylloTrack Workspace';
   };
 
+  const handleToggle = () => {
+    playClickSound();
+    if (onToggleCollapse) onToggleCollapse();
+  };
+
   return (
     <header className="top-navbar">
       <div className="top-nav-left">
@@ -50,6 +57,15 @@ const Navbar = ({ onOpenMobileMenu, onGlobalSearch }) => {
           title="Open Menu"
         >
           <Menu size={22} />
+        </button>
+
+        <button
+          className="desktop-nav-toggle-btn icon-btn-ghost"
+          onClick={handleToggle}
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        >
+          {isCollapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
         </button>
 
         <div className="top-nav-title-group">

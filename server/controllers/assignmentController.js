@@ -6,8 +6,9 @@ const Event = require('../models/Event');
 const getAssignments = async (req, res) => {
   try {
     const userId = req.user._id;
+    const userSection = req.user.section || 'Section A';
 
-    const assignments = await Assignment.find({ section: 'Section A' })
+    const assignments = await Assignment.find({ section: userSection })
       .populate('subject', 'name code')
       .sort({ dueDate: 1 });
 
@@ -51,7 +52,7 @@ const createAssignment = async (req, res) => {
       dueTime: dueTime || '23:59',
       description: description || '',
       priority: priority || 'medium',
-      section: section || 'Section A',
+      section: section || req.user?.section || 'Section A',
       createdBy: req.user._id,
     });
 
@@ -61,6 +62,7 @@ const createAssignment = async (req, res) => {
     try {
       await Event.create({
         user: req.user._id,
+        assignmentRef: assignment._id,
         title: `[Assignment] ${title.trim()}`,
         type: 'assignment',
         subject: subject,
@@ -99,6 +101,24 @@ const updateAssignment = async (req, res) => {
     if (section) assignment.section = section;
 
     await assignment.save();
+
+    // Sync updates to mirrored Event records
+    try {
+      await Event.updateMany(
+        { assignmentRef: assignment._id },
+        {
+          title: `[Assignment] ${assignment.title}`,
+          subject: assignment.subject,
+          date: assignment.dueDate,
+          time: assignment.dueTime,
+          priority: assignment.priority,
+          description: assignment.description,
+        }
+      );
+    } catch (e) {
+      console.error('Failed to update mirrored Event model:', e.message);
+    }
+
     const populated = await Assignment.findById(assignment._id).populate('subject', 'name code');
     res.json(populated);
   } catch (error) {
@@ -115,6 +135,7 @@ const deleteAssignment = async (req, res) => {
     }
 
     await UserAssignment.deleteMany({ assignment: req.params.id });
+    await Event.deleteMany({ assignmentRef: req.params.id });
     await assignment.deleteOne();
     res.json({ message: 'Assignment deleted successfully', id: req.params.id });
   } catch (error) {
@@ -135,17 +156,29 @@ const toggleAssignmentSubmitted = async (req, res) => {
 
     let userAssig = await UserAssignment.findOne({ user: userId, assignment: assignmentId });
     if (!userAssig) {
-      userAssig = new UserAssignment({
-        user: userId,
-        assignment: assignmentId,
-        submitted: true,
-      });
+      try {
+        userAssig = await UserAssignment.create({
+          user: userId,
+          assignment: assignmentId,
+          submitted: true,
+          submittedAt: new Date(),
+        });
+      } catch (err) {
+        if (err.code === 11000) {
+          userAssig = await UserAssignment.findOne({ user: userId, assignment: assignmentId });
+          userAssig.submitted = !userAssig.submitted;
+          userAssig.submittedAt = new Date();
+          await userAssig.save();
+        } else {
+          throw err;
+        }
+      }
     } else {
       userAssig.submitted = !userAssig.submitted;
       userAssig.submittedAt = new Date();
+      await userAssig.save();
     }
 
-    await userAssig.save();
     res.json({
       assignmentId,
       submitted: userAssig.submitted,

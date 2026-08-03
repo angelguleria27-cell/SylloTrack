@@ -6,7 +6,14 @@ const Event = require('../models/Event');
 const getEvents = async (req, res) => {
   try {
     const { type, subject, start, end } = req.query;
-    const filter = { user: req.user._id };
+    
+    // Base filter: events created by this user OR assignment events
+    const baseConditions = [
+      { user: req.user._id },
+      { type: 'assignment' },
+    ];
+
+    const filter = { $or: baseConditions };
 
     if (type && type !== 'all') {
       filter.type = type;

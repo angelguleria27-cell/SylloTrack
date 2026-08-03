@@ -5,22 +5,17 @@ import {
   LayoutDashboard,
   Layers,
   Calendar,
-  PlusCircle,
-  Sun,
-  Moon,
-  Volume2,
-  VolumeX,
   LogOut,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
+const Sidebar = ({ isMobileOpen, setIsMobileOpen, isCollapsed }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-  const { isDark, toggleTheme, soundEnabled, toggleSound, playClickSound } = useTheme();
+  const { playClickSound } = useTheme();
 
   if (!isAuthenticated) return null;
 
@@ -66,10 +61,14 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
         />
       )}
 
-      <aside className={`app-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+      <aside
+        className={`app-sidebar ${isMobileOpen ? 'mobile-open' : ''} ${
+          isCollapsed ? 'collapsed' : ''
+        }`}
+      >
         {/* Sidebar Header / Brand */}
         <div className="sidebar-brand-wrapper">
-          <Link to="/" className="sidebar-brand" onClick={handleNavClick}>
+          <Link to="/" className="sidebar-brand" onClick={handleNavClick} title="SylloTrack Home">
             <div className="brand-logo-icon">
               <GraduationCap size={22} />
             </div>
@@ -78,35 +77,25 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
               <span className="brand-badge">B.Tech CSE • Sec A</span>
             </div>
           </Link>
+
           <button
             className="mobile-close-btn icon-btn-ghost"
             onClick={() => setIsMobileOpen(false)}
+            title="Close Menu"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Live Section Context Pill */}
-        <div className="sidebar-section-status">
+        <div
+          className="sidebar-section-status"
+          title="Section A • Semester 5"
+        >
           <div className="status-indicator-dot" />
           <div className="status-text">
             <span>Section A • Semester 5</span>
-            <strong style={{ display: 'block', fontSize: '0.72rem', opacity: 0.8 }}>
-              90 Classmates Syncing
-            </strong>
           </div>
-        </div>
-
-        {/* Quick Action Button */}
-        <div className="sidebar-quick-action">
-          <Link
-            to="/calendar"
-            onClick={handleNavClick}
-            className="btn btn-primary btn-sidebar-action"
-          >
-            <PlusCircle size={17} />
-            <span>+ Add Exam / Slot</span>
-          </Link>
         </div>
 
         {/* Navigation Links */}
@@ -125,6 +114,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
                 to={item.path}
                 onClick={handleNavClick}
                 className={`sidebar-link ${isActive ? 'active' : ''}`}
+                title={item.label}
               >
                 <Icon size={19} className="nav-link-icon" />
                 <span className="nav-link-text">{item.label}</span>
@@ -136,7 +126,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
         {/* Sidebar Footer / User Profile */}
         <div className="sidebar-footer">
-          <div className="sidebar-user-card">
+          <div className="sidebar-user-card" title={user?.name || 'Student'}>
             <div className="sidebar-avatar">
               {firstName.charAt(0).toUpperCase()}
             </div>
@@ -144,29 +134,11 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
               <span className="user-name-text">{user?.name || 'Student'}</span>
               <span className="user-email-text">{user?.email || 'CSE Section A'}</span>
             </div>
-          </div>
-
-          <div className="sidebar-controls-row">
-            <button
-              onClick={toggleTheme}
-              className={`icon-btn theme-toggle-btn ${isDark ? 'is-dark' : 'is-light'}`}
-              title={isDark ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
-            >
-              {isDark ? <Sun size={17} /> : <Moon size={17} />}
-            </button>
-
-            <button
-              onClick={toggleSound}
-              className={`icon-btn sound-toggle-btn ${soundEnabled ? 'is-on' : 'is-off'}`}
-              title={soundEnabled ? 'Mute Sounds' : 'Enable Sounds'}
-            >
-              {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
-            </button>
-
             <button
               onClick={handleLogout}
               className="icon-btn logout-btn"
               title="Sign Out"
+              style={{ marginLeft: 'auto' }}
             >
               <LogOut size={17} />
             </button>

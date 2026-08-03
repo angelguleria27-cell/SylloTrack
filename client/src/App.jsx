@@ -19,9 +19,20 @@ import CalendarPage from './pages/CalendarPage';
 
 function AppLayout({ children }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem('syllotrack_sidebar_collapsed') === 'true';
+  });
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const location = useLocation();
+
+  const toggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('syllotrack_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   if (location.pathname === '/admin/login') {
     return <main className="auth-full-screen">{children}</main>;
@@ -29,7 +40,7 @@ function AppLayout({ children }) {
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
-  if (isAdminRoute) {
+  if (isAdminRoute && isAuthenticated && isAdmin) {
     return <div className="admin-app-shell">{children}</div>;
   }
 
@@ -38,12 +49,19 @@ function AppLayout({ children }) {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar isMobileOpen={isMobileOpen} setIsMobileOpen={setIsMobileOpen} />
-      <div className="app-shell-main">
+    <div className={`app-shell ${isCollapsed ? 'sidebar-is-collapsed' : ''}`}>
+      <Sidebar
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleCollapse}
+      />
+      <div className={`app-shell-main ${isCollapsed ? 'collapsed' : ''}`}>
         <Navbar
           onOpenMobileMenu={() => setIsMobileOpen(true)}
           onGlobalSearch={(q) => setGlobalSearchQuery(q)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleCollapse}
         />
         <main className="main-content-viewport">{children}</main>
       </div>

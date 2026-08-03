@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import { useTheme } from '../context/ThemeContext';
+import { formatTimeRange, formatSingleTime } from '../utils/timeFormat';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -29,7 +30,7 @@ const MONTH_NAMES = [
 ];
 
 const CalendarPage = () => {
-  const { playClickSound, playCheckSound, playSuccessSound, playDeleteSound } = useTheme();
+  const { playClickSound, playCheckSound, playSuccessSound, playDeleteSound, is12Hour } = useTheme();
 
   // View state: 'calendar' | 'scheduler' | 'deadlines'
   const [activeTab, setActiveTab] = useState('calendar');
@@ -196,6 +197,7 @@ const CalendarPage = () => {
       setEvents(events.map((ev) => (ev._id === eventId ? res.data : ev)));
     } catch (err) {
       console.error('Failed to toggle event:', err);
+      alert('Could not update event completion status.');
     }
   };
 
@@ -240,6 +242,7 @@ const CalendarPage = () => {
       setScheduleBlocks(scheduleBlocks.map((b) => (b._id === blockId ? res.data : b)));
     } catch (err) {
       console.error('Failed to toggle schedule block:', err);
+      alert('Could not update schedule block status.');
     }
   };
 
@@ -676,7 +679,7 @@ const CalendarPage = () => {
                         )}
                       </button>
                       <div className="schedule-info">
-                        <span className="time-range">{block.startTime} - {block.endTime}</span>
+                        <span className="time-range">{formatTimeRange(block.startTime, block.endTime, is12Hour)}</span>
                         <span className={`schedule-title ${block.completed ? 'strikethrough' : ''}`}>
                           {block.title}
                         </span>
@@ -770,8 +773,8 @@ const CalendarPage = () => {
                 {scheduleBlocks.map((block) => (
                   <div key={block._id} className={`timeline-block ${block.completed ? 'completed' : ''}`}>
                     <div className="block-time-col">
-                      <span className="start-time">{block.startTime}</span>
-                      <span className="end-time">{block.endTime}</span>
+                      <span className="start-time">{formatSingleTime(block.startTime, is12Hour)}</span>
+                      <span className="end-time">{formatSingleTime(block.endTime, is12Hour)}</span>
                     </div>
 
                     <div className="block-card card glass-panel">

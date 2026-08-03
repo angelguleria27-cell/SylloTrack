@@ -228,23 +228,39 @@ const toggleTopicCompletion = async (req, res) => {
 // POST /api/subjects (Create subject)
 const createSubject = async (req, res) => {
   try {
-    const { name, code, semester, ltpc, description, units, isGlobal } = req.body;
+    const { name, code, semester, ltpc, description, units, topics, isGlobal } = req.body;
     if (!name || name.trim() === '') {
       return res.status(400).json({ message: 'Subject name is required' });
     }
 
     const isAdmin = req.user && req.user.role === 'admin';
 
+    let initialUnits = units || [];
+    if ((!initialUnits || initialUnits.length === 0) && topics && Array.isArray(topics) && topics.length > 0) {
+      const validTopics = topics
+        .map((t) => (typeof t === 'string' ? t.trim() : (t && t.title ? t.title.trim() : '')))
+        .filter((t) => t.length > 0);
+      if (validTopics.length > 0) {
+        initialUnits = [
+          {
+            unitNumber: 1,
+            title: 'General Topics',
+            topics: validTopics.map((title) => ({ title })),
+          },
+        ];
+      }
+    }
+
     const subject = new Subject({
       name: name.trim(),
       code: code ? code.trim().toUpperCase() : 'CUSTOM-101',
       semester: semester || 5,
       ltpc: ltpc || '3-0-0-3',
-      section: 'Section A',
+      section: req.user?.section || 'Section A',
       description: description || '',
       isGlobal: isAdmin ? (isGlobal !== undefined ? isGlobal : true) : false,
       user: isAdmin ? null : req.user._id,
-      units: units || [],
+      units: initialUnits,
     });
 
     await subject.save();
@@ -262,6 +278,11 @@ const updateSubject = async (req, res) => {
 
     if (!subject) {
       return res.status(404).json({ message: 'Subject not found' });
+    }
+
+    const isAdmin = req.user && req.user.role === 'admin';
+    if (!isAdmin && subject.user && subject.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this subject' });
     }
 
     if (name) subject.name = name.trim();
@@ -287,9 +308,15 @@ const deleteSubject = async (req, res) => {
 
     const isAdmin = req.user && req.user.role === 'admin';
 
-    if (subject.isGlobal && !isAdmin) {
-      await UserProgress.deleteMany({ subject: req.params.id, user: req.user._id });
-      return res.json({ message: 'Progress for global subject reset successfully.' });
+    if (subject.isGlobal) {
+      if (!isAdmin) {
+        await UserProgress.deleteMany({ subject: req.params.id, user: req.user._id });
+        return res.json({ message: 'Progress for global subject reset successfully.' });
+      }
+    } else {
+      if (!isAdmin && subject.user && subject.user.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Not authorized to delete this subject' });
+      }
     }
 
     await UserProgress.deleteMany({ subject: req.params.id });

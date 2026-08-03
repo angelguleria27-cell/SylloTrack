@@ -6,6 +6,11 @@ const eventSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  assignmentRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Assignment',
+    default: null,
+  },
   title: {
     type: String,
     required: [true, 'Event title is required'],

@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const seedSubjects = require('./config/seedSubjects');
 const seedAdmin = require('./config/seedAdmin');
+const seedTimetable = require('./config/seedTimetable');
 
 const app = express();
 
@@ -24,6 +25,7 @@ const app = express();
 connectDB().then(async () => {
   await seedSubjects();
   await seedAdmin();
+  await seedTimetable();
 });
 
 // Middleware

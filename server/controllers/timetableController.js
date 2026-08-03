@@ -3,7 +3,8 @@ const Timetable = require('../models/Timetable');
 // GET /api/timetable
 const getTimetable = async (req, res) => {
   try {
-    const entries = await Timetable.find({ section: 'Section A' })
+    const userSection = req.user?.section || 'Section A';
+    const entries = await Timetable.find({ section: userSection })
       .populate('subject', 'name code ltpc')
       .sort({ day: 1, startTime: 1 });
     res.json(entries);

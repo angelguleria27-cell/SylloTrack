@@ -26,12 +26,14 @@ import {
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { formatTimeRange } from '../../utils/timeFormat';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
-  const { playClickSound, playSuccessSound, playDeleteSound } = useTheme();
+  const { playClickSound, playSuccessSound, playDeleteSound, is12Hour, toggleTimeFormat } = useTheme();
 
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'subjects' | 'assignments' | 'timetable' | 'announcements'
+  const [timetableFilterDay, setTimetableFilterDay] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -767,7 +769,7 @@ const AdminDashboard = () => {
                     startTime: '09:00',
                     endTime: '10:00',
                     subject: subjects[0]?._id || '',
-                    room: 'LT-3',
+                    room: 'NR1',
                     teacher: '',
                   });
                   setShowTimetableModal(true);
@@ -777,7 +779,52 @@ const AdminDashboard = () => {
               </button>
             </div>
 
-            <div className="admin-card card" style={{ marginTop: '1.5rem' }}>
+            {/* Day Filter Pills & Time Format Toggle */}
+            <div className="toolbar-controls-right" style={{ marginTop: '1.25rem', justifyContent: 'space-between', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+              <div className="filter-pill-group">
+                {['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((dayName) => (
+                  <button
+                    key={dayName}
+                    className={`filter-btn ${timetableFilterDay === dayName ? 'active' : ''}`}
+                    onClick={() => {
+                      playClickSound();
+                      setTimetableFilterDay(dayName);
+                    }}
+                  >
+                    {dayName}
+                  </button>
+                ))}
+              </div>
+
+              <div className="time-format-switcher" title="Toggle between 12-hour and 24-hour time format">
+                <button
+                  type="button"
+                  className={`time-format-btn ${is12Hour ? 'active' : ''}`}
+                  onClick={() => {
+                    if (!is12Hour) {
+                      playClickSound();
+                      toggleTimeFormat();
+                    }
+                  }}
+                >
+                  12H
+                </button>
+                <button
+                  type="button"
+                  className={`time-format-btn ${!is12Hour ? 'active' : ''}`}
+                  onClick={() => {
+                    if (is12Hour) {
+                      playClickSound();
+                      toggleTimeFormat();
+                    }
+                  }}
+                >
+                  24H
+                </button>
+              </div>
+            </div>
+
+            <div className="admin-card card" style={{ marginTop: '1rem' }}>
               {timetable.length === 0 ? (
                 <div className="empty-state">
                   <Calendar size={32} color="var(--primary)" />
@@ -797,41 +844,53 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {timetable.map((tt) => (
-                        <tr key={tt._id}>
-                          <td><strong>{tt.day}</strong></td>
-                          <td><Clock size={14} /> {tt.startTime} - {tt.endTime}</td>
-                          <td><span className="code-pill">{tt.subject?.code}</span> {tt.subject?.name}</td>
-                          <td>{tt.room || 'LT-3'}</td>
-                          <td>{tt.teacher || 'Department Faculty'}</td>
-                          <td style={{ textAlign: 'right' }}>
-                            <button
-                              className="btn btn-sm btn-secondary"
-                              style={{ marginRight: '0.4rem' }}
-                              onClick={() => {
-                                setEditingTimetable(tt);
-                                setTimetableForm({
-                                  day: tt.day,
-                                  startTime: tt.startTime,
-                                  endTime: tt.endTime,
-                                  subject: tt.subject?._id || tt.subject || '',
-                                  room: tt.room || 'LT-3',
-                                  teacher: tt.teacher || '',
-                                });
-                                setShowTimetableModal(true);
-                              }}
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() => handleDeleteTimetable(tt._id)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {timetable
+                        .filter((tt) => timetableFilterDay === 'All' || tt.day === timetableFilterDay)
+                        .sort((a, b) => {
+                          const DAYS_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                          const dayDiff = DAYS_ORDER.indexOf(a.day) - DAYS_ORDER.indexOf(b.day);
+                          if (dayDiff !== 0) return dayDiff;
+                          return a.startTime.localeCompare(b.startTime);
+                        })
+                        .map((tt) => (
+                          <tr key={tt._id}>
+                            <td><strong>{tt.day}</strong></td>
+                            <td><Clock size={14} /> {formatTimeRange(tt.startTime, tt.endTime, is12Hour)}</td>
+                            <td><span className="code-pill">{tt.subject?.code}</span> {tt.subject?.name}</td>
+                            <td>
+                              <span className="room-pill" style={{ background: 'rgba(56, 189, 248, 0.12)', color: 'var(--primary)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.82rem' }}>
+                                {tt.room || 'NR1'}
+                              </span>
+                            </td>
+                            <td>{tt.teacher || 'Department Faculty'}</td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="btn btn-sm btn-secondary"
+                                style={{ marginRight: '0.4rem' }}
+                                onClick={() => {
+                                  setEditingTimetable(tt);
+                                  setTimetableForm({
+                                    day: tt.day,
+                                    startTime: tt.startTime,
+                                    endTime: tt.endTime,
+                                    subject: tt.subject?._id || tt.subject || '',
+                                    room: tt.room || 'NR1',
+                                    teacher: tt.teacher || '',
+                                  });
+                                  setShowTimetableModal(true);
+                                }}
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => handleDeleteTimetable(tt._id)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

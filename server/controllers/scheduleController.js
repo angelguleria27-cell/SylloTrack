@@ -1,6 +1,7 @@
 const ScheduleBlock = require('../models/ScheduleBlock');
 const Subject = require('../models/Subject');
 const Topic = require('../models/Topic');
+const UserProgress = require('../models/UserProgress');
 
 // @desc    Get schedule blocks for authenticated user by date or date range
 // @route   GET /api/schedule
@@ -154,14 +155,52 @@ const autoGenerateSchedule = async (req, res) => {
       return res.status(400).json({ message: 'Date is required for schedule auto-generation' });
     }
 
-    // Get uncompleted topics across user's subjects
-    const subjects = await Subject.find({ user: req.user._id });
-    const subjectIds = subjects.map((s) => s._id);
+    const userId = req.user._id;
 
-    const pendingTopics = await Topic.find({
-      subject: { $in: subjectIds },
-      completed: false,
-    }).populate('subject', 'name');
+    // Fetch user progress to know completed topics
+    const userProgress = await UserProgress.find({ user: userId });
+    const completedTopicIds = new Set(
+      userProgress.flatMap((p) => (p.completedTopics || []).map((id) => id.toString()))
+    );
+
+    // Fetch accessible subjects (global or user custom)
+    const subjects = await Subject.find({
+      $or: [{ isGlobal: true }, { user: userId }],
+    });
+
+    const pendingTopics = [];
+    subjects.forEach((subject) => {
+      if (subject.units && subject.units.length > 0) {
+        subject.units.forEach((unit) => {
+          (unit.topics || []).forEach((t) => {
+            if (!completedTopicIds.has(t._id.toString())) {
+              pendingTopics.push({
+                _id: t._id,
+                title: t.title,
+                subject: { _id: subject._id, name: subject.name },
+              });
+            }
+          });
+        });
+      }
+    });
+
+    // Fallback: check standalone Topic collection if no unit topics found
+    if (pendingTopics.length === 0) {
+      const subjectIds = subjects.map((s) => s._id);
+      const legacyTopics = await Topic.find({
+        subjectId: { $in: subjectIds },
+        completed: false,
+      }).populate('subjectId', 'name');
+
+      legacyTopics.forEach((t) => {
+        pendingTopics.push({
+          _id: t._id,
+          title: t.title,
+          subject: { _id: t.subjectId?._id || t.subjectId, name: t.subjectId?.name || 'Subject' },
+        });
+      });
+    }
 
     if (pendingTopics.length === 0) {
       return res.status(400).json({ message: 'No uncompleted syllabus topics found to schedule!' });
@@ -174,7 +213,7 @@ const autoGenerateSchedule = async (req, res) => {
       const topic = pendingTopics[i];
       const startHStr = String(currentHour).padStart(2, '0');
       const startStr = `${startHStr}:00`;
-      
+
       const endHour = currentHour + Math.floor(durationMinutes / 60);
       const endMin = durationMinutes % 60;
       const endHStr = String(endHour).padStart(2, '0');
