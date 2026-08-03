@@ -21,11 +21,21 @@ const seedTimetable = require('./config/seedTimetable');
 
 const app = express();
 
-// Connect Database & Seed Initial Data
-connectDB().then(async () => {
-  await seedSubjects();
-  await seedAdmin();
-  await seedTimetable();
+// Ensure DB connection for every request in serverless environment
+let isSeeded = false;
+app.use(async (req, res, next) => {
+  await connectDB();
+  if (!isSeeded) {
+    try {
+      await seedSubjects();
+      await seedAdmin();
+      await seedTimetable();
+      isSeeded = true;
+    } catch (err) {
+      console.error('Seeding warning:', err.message);
+    }
+  }
+  next();
 });
 
 // Middleware
@@ -47,8 +57,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SylloTrack API is running' });
 });
 
-const PORT = process.env.PORT || 5001;
+if (process.env.NODE_ENV !== 'production' || require.main === module) {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+module.exports = app;

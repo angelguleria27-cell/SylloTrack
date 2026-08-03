@@ -2,12 +2,21 @@
   "name": "syllotrack",
   "version": "1.0.0",
   "description": "SylloTrack - Syllabus Progress Tracker (MERN Stack)",
-  "main": "server/server.js",
+  "main": "api/index.js",
   "scripts": {
+    "build": "cd client && npm install && npm run build",
     "install:client": "npm install --prefix client",
     "install:server": "npm install --prefix server",
     "install:all": "npm install && npm run install:client && npm run install:server",
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,cyan\" \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.3.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
@@ -22,6 +31,5 @@
     "node"
   ],
   "author": "",
-  
   "license": "ISC"
 }
