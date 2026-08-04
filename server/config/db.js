@@ -17,7 +17,9 @@ const connectDB = async () => {
     isConnected = conn.connections[0].readyState === 1;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
+    isConnected = false;
     console.error(`MongoDB Connection Error: ${error.message}`);
+    throw error;
   }
 };
 

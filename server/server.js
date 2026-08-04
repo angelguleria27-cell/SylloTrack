@@ -24,18 +24,26 @@ const app = express();
 // Ensure DB connection for every request in serverless environment
 let isSeeded = false;
 app.use(async (req, res, next) => {
-  await connectDB();
-  if (!isSeeded) {
-    try {
-      await seedSubjects();
-      await seedAdmin();
-      await seedTimetable();
-      isSeeded = true;
-    } catch (err) {
-      console.error('Seeding warning:', err.message);
+  try {
+    await connectDB();
+    if (!isSeeded) {
+      try {
+        await seedSubjects();
+        await seedAdmin();
+        await seedTimetable();
+        isSeeded = true;
+      } catch (err) {
+        console.error('Seeding warning:', err.message);
+      }
     }
+    next();
+  } catch (err) {
+    console.error('Database middleware error:', err.message);
+    return res.status(500).json({
+      message: 'Database connection failed. Check MONGO_URI and MongoDB Atlas Network Access (IP Whitelist).',
+      error: err.message,
+    });
   }
-  next();
 });
 
 // Middleware
