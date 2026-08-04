@@ -17,6 +17,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
+import { formatEventDisplayDate } from '../utils/dateUtils';
+
 const Navbar = ({ onOpenMobileMenu, onGlobalSearch, isCollapsed, onToggleCollapse }) => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
@@ -25,7 +27,7 @@ const Navbar = ({ onOpenMobileMenu, onGlobalSearch, isCollapsed, onToggleCollaps
   if (!isAuthenticated) return null;
 
   // Format today's date nicely
-  const todayFormatted = new Date().toLocaleDateString('en-US', {
+  const todayFormatted = formatEventDisplayDate(new Date(), {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

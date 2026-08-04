@@ -27,6 +27,7 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { formatTimeRange } from '../../utils/timeFormat';
+import { getEventDateStr, formatEventDisplayDate } from '../../utils/dateUtils';
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -469,7 +470,7 @@ const AdminDashboard = () => {
                           <tr key={item._id}>
                             <td><strong>{item.title}</strong></td>
                             <td>{item.subject?.name || 'General'}</td>
-                            <td>{new Date(item.dueDate).toLocaleDateString()} @ {item.dueTime}</td>
+                            <td>{formatEventDisplayDate(item.dueDate)} @ {item.dueTime}</td>
                             <td>
                               <span className={`badge-priority ${item.priority}`}>
                                 {item.priority}
@@ -713,7 +714,7 @@ const AdminDashboard = () => {
                         <tr key={ass._id}>
                           <td><strong>{ass.title}</strong></td>
                           <td><span className="code-pill">{ass.subject?.code || 'SEC-A'}</span> {ass.subject?.name}</td>
-                          <td>{new Date(ass.dueDate).toLocaleDateString()} @ {ass.dueTime}</td>
+                           <td>{formatEventDisplayDate(ass.dueDate)} @ {ass.dueTime}</td>
                           <td><span className={`badge-priority ${ass.priority}`}>{ass.priority}</span></td>
                           <td>{ass.description || '—'}</td>
                           <td style={{ textAlign: 'right' }}>
@@ -725,7 +726,7 @@ const AdminDashboard = () => {
                                 setAssignmentForm({
                                   title: ass.title,
                                   subject: ass.subject?._id || ass.subject || '',
-                                  dueDate: ass.dueDate ? new Date(ass.dueDate).toISOString().split('T')[0] : '',
+                                  dueDate: ass.dueDate ? getEventDateStr(ass.dueDate) : '',
                                   dueTime: ass.dueTime || '23:59',
                                   priority: ass.priority || 'medium',
                                   description: ass.description || '',

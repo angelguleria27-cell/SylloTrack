@@ -21,6 +21,7 @@ import TimetableWidget from '../components/TimetableWidget';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatTimeRange } from '../utils/timeFormat';
+import { getTodayStr, formatEventDisplayDate } from '../utils/dateUtils';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = getTodayStr();
 
       const [subRes, evRes, schedRes, annRes, assRes] = await Promise.all([
         api.get('/subjects'),
@@ -311,7 +312,7 @@ const Dashboard = () => {
                     <div className="widget-item-info">
                       <strong className="ev-title">{ev.title}</strong>
                       <span className="ev-date">
-                        {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {formatEventDisplayDate(ev.date, { month: 'short', day: 'numeric' })}
                         {ev.subject?.name ? ` • ${ev.subject.name}` : ''}
                       </span>
                     </div>

@@ -22,6 +22,7 @@ import {
 import api from '../api/axios';
 import { useTheme } from '../context/ThemeContext';
 import { formatTimeRange, formatSingleTime } from '../utils/timeFormat';
+import { getTodayStr, formatLocalDate, getEventDateStr, formatEventDisplayDate } from '../utils/dateUtils';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -36,10 +37,7 @@ const CalendarPage = () => {
   const [activeTab, setActiveTab] = useState('calendar');
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDateStr, setSelectedDateStr] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
+  const [selectedDateStr, setSelectedDateStr] = useState(() => getTodayStr());
 
   // Data states
   const [events, setEvents] = useState([]);
@@ -96,8 +94,8 @@ const CalendarPage = () => {
       setError('');
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const startOfMonth = new Date(year, month - 1, 1).toISOString();
-      const endOfMonth = new Date(year, month + 2, 0).toISOString();
+      const startOfMonth = formatLocalDate(year, month - 1, 1);
+      const endOfMonth = formatLocalDate(year, month + 2, 0);
 
       const [eventsRes, subjectsRes] = await Promise.all([
         api.get(`/events?start=${startOfMonth}&end=${endOfMonth}`),
@@ -144,7 +142,7 @@ const CalendarPage = () => {
     playClickSound();
     const today = new Date();
     setCurrentDate(today);
-    setSelectedDateStr(today.toISOString().split('T')[0]);
+    setSelectedDateStr(getTodayStr());
   };
 
   const handleSelectDate = (dateString) => {
@@ -160,10 +158,9 @@ const CalendarPage = () => {
     return true;
   });
 
-  const getEventsForDate = (dateObj) => {
-    const dateStr = dateObj.toISOString().split('T')[0];
+  const getEventsForDate = (dateStr) => {
     return filteredEvents.filter((ev) => {
-      const evDateStr = new Date(ev.date).toISOString().split('T')[0];
+      const evDateStr = getEventDateStr(ev.date);
       return evDateStr === dateStr;
     });
   };
@@ -301,7 +298,7 @@ const CalendarPage = () => {
       title: ev.title,
       type: ev.type,
       subject: ev.subject?._id || ev.subject || '',
-      date: new Date(ev.date).toISOString().split('T')[0],
+      date: getEventDateStr(ev.date),
       time: ev.time || '',
       priority: ev.priority || 'medium',
       description: ev.description || '',
@@ -378,13 +375,17 @@ const CalendarPage = () => {
   };
 
   const getDaysRemainingText = (eventDateStr) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const evDate = new Date(eventDateStr);
-    evDate.setHours(0, 0, 0, 0);
+    const todayStr = getTodayStr();
+    const [ty, tm, td] = todayStr.split('-').map(Number);
+    const today = new Date(ty, tm - 1, td);
+
+    const evStr = getEventDateStr(eventDateStr);
+    if (!evStr) return null;
+    const [ey, em, ed] = evStr.split('-').map(Number);
+    const evDate = new Date(ey, em - 1, ed);
 
     const diffTime = evDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return <span className="countdown-tag overdue">Overdue</span>;
     if (diffDays === 0) return <span className="countdown-tag today">Today!</span>;
@@ -534,11 +535,10 @@ const CalendarPage = () => {
 
               {Array.from({ length: daysInMonth }).map((_, idx) => {
                 const dayNum = idx + 1;
-                const dObj = new Date(year, month, dayNum);
-                const dateStr = dObj.toISOString().split('T')[0];
-                const dayEvents = getEventsForDate(dObj);
+                const dateStr = formatLocalDate(year, month, dayNum);
+                const dayEvents = getEventsForDate(dateStr);
 
-                const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                const isToday = getTodayStr() === dateStr;
                 const isSelected = selectedDateStr === dateStr;
 
                 return (
@@ -585,7 +585,7 @@ const CalendarPage = () => {
           <div className="date-detail-sidebar card glass-panel">
             <div className="sidebar-date-header">
               <h3>
-                {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
+                {formatEventDisplayDate(selectedDateStr, {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',
@@ -699,9 +699,9 @@ const CalendarPage = () => {
               <button
                 className="btn-icon-nav"
                 onClick={() => {
-                  const prev = new Date(selectedDateStr + 'T00:00:00');
-                  prev.setDate(prev.getDate() - 1);
-                  handleSelectDate(prev.toISOString().split('T')[0]);
+                  const [y, m, d] = selectedDateStr.split('-').map(Number);
+                  const prev = new Date(y, m - 1, d - 1);
+                  handleSelectDate(getEventDateStr(prev));
                 }}
               >
                 <ChevronLeft size={18} />
@@ -715,9 +715,9 @@ const CalendarPage = () => {
               <button
                 className="btn-icon-nav"
                 onClick={() => {
-                  const next = new Date(selectedDateStr + 'T00:00:00');
-                  next.setDate(next.getDate() + 1);
-                  handleSelectDate(next.toISOString().split('T')[0]);
+                  const [y, m, d] = selectedDateStr.split('-').map(Number);
+                  const next = new Date(y, m - 1, d + 1);
+                  handleSelectDate(getEventDateStr(next));
                 }}
               >
                 <ChevronRight size={18} />

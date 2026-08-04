@@ -22,9 +22,13 @@ const getEvents = async (req, res) => {
       filter.subject = subject;
     }
     if (start && end) {
+      const startDate = new Date(start);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(end);
+      endDate.setHours(23, 59, 59, 999);
       filter.date = {
-        $gte: new Date(start),
-        $lte: new Date(end),
+        $gte: startDate,
+        $lte: endDate,
       };
     }
 
